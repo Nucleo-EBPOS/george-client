@@ -58,6 +58,8 @@ env:
   API_SERVER: "https://georgedesk.com"
   RS_PUB_KEY: "GuScaZGLwh+xwwBVafvVItAJsbjNf+zT7tBEUWCIwqo="
   GEORGE_APP_NAME: "George"
+  # Versão do produto (tag vX.Y.Z); fora de release fica "ci" → checador usa 0.0.0.
+  GEORGE_VERSION: "${{ inputs.upload-tag }}"
   VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
   # vcpkg version: 2026.07.29
   # If we change the `VCPKG COMMIT_ID`, please remember:

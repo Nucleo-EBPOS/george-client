@@ -16,6 +16,25 @@ pub const ORG: &str = "com.georgedesk";
 pub const SITE_URL: &str = "https://georgedesk.com";
 pub const PRIVACY_URL: &str = "https://georgedesk.com/privacidade";
 pub const UPDATE_URL: &str = "https://georgedesk.com/api/v1/releases/latest";
+/// Versão do produto George (tag do release, ex.: "v0.1.0"), injetada pelo CI em
+/// `GEORGE_VERSION`. É independente de `crate::VERSION` (versão do motor RustDesk,
+/// usada na negociação de recursos entre peers e que não deve mudar).
+pub const VERSION_RAW: &str = match option_env!("GEORGE_VERSION") {
+    Some(v) => v,
+    None => "0.1.0",
+};
+
+/// Versão do George sem o prefixo `v`; `0.0.0` quando o build não é de release
+/// (ex.: CI de PR) — assim qualquer release publicado é oferecido como update.
+pub fn version() -> &'static str {
+    let v = VERSION_RAW.strip_prefix('v').unwrap_or(VERSION_RAW);
+    if v.split('.').count() == 3 && v.split('.').all(|p| p.parse::<u16>().is_ok()) {
+        v
+    } else {
+        "0.0.0"
+    }
+}
+
 /// Clientes customizados do upstream não checam atualização; o George checa.
 pub const CHECK_UPDATES: bool = true;
 /// Repositório GitHub onde os releases são publicados (owner, repo).
@@ -116,6 +135,11 @@ mod tests {
         assert!(is_release_repo("Nucleo-EBPOS", "george-client"));
         assert!(is_release_repo("rustdesk", "rustdesk"));
         assert!(!is_release_repo("rustdesk", "other"));
+    }
+
+    #[test]
+    fn version_is_semver() {
+        assert_eq!(version().split('.').count(), 3);
     }
 
     #[test]

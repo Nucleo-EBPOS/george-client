@@ -1119,7 +1119,8 @@ fn process_software_update_check_response(bytes: Bytes) -> ResultType<()> {
     let release_id = release_id_from_update_url(&response_url)?;
     let latest_release_version = display_version_from_release_id(&release_id)?;
 
-    if get_version_number(&latest_release_version) > get_version_number(crate::VERSION) {
+    // GEORGE: compara com a versão do George (tag do release), não com a do motor RustDesk.
+    if get_version_number(&latest_release_version) > get_version_number(crate::george::version()) {
         #[cfg(feature = "flutter")]
         {
             let mut m = HashMap::new();

@@ -97,6 +97,8 @@ head = must_replace(head, '''  TAG_NAME: "${{ inputs.upload-tag }}"
   API_SERVER: "https://georgedesk.com"
   RS_PUB_KEY: "GuScaZGLwh+xwwBVafvVItAJsbjNf+zT7tBEUWCIwqo="
   GEORGE_APP_NAME: "George"
+  # Versão do produto (tag vX.Y.Z); fora de release fica "ci" → checador usa 0.0.0.
+  GEORGE_VERSION: "${{ inputs.upload-tag }}"
 ''')
 
 # ---- generate-bridge / topmost ----
