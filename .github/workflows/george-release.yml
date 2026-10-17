@@ -1,0 +1,24 @@
+# GEORGE: release por tag vX.Y.Z → gera Windows (exe+MSI), macOS (dmg), Linux (deb+AppImage) e web (zip)
+name: George release
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload-tag:
+        type: string
+        default: "nightly"
+        description: "Tag do release (vX.Y.Z publica release no GitHub)"
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+
+jobs:
+  build:
+    uses: ./.github/workflows/george-build.yml
+    secrets: inherit
+    permissions:
+      contents: write
+    with:
+      upload-artifact: true
+      upload-tag: ${{ github.ref_type == 'tag' && github.ref_name || inputs.upload-tag }}
