@@ -57,6 +57,18 @@ const PT_BR: &[(&str, &str)] = &[
     // Sobrescritas de textos upstream
     ("Slogan_tip", "George — your remote support"),
     ("powered_by_me", ""),
+    // GEORGE: textos de permissão do macOS, naturais e com a marca George.
+    ("Permissions", "Permissões"),
+    ("Configure", "Configurar"),
+    ("Help", "Ajuda"),
+    ("config_screen", "Para que outras pessoas acessem este computador, conceda ao George a permissão de \"Gravação de Tela\" nas Configurações do macOS."),
+    ("config_acc", "Para que alguém controle este computador, conceda ao George a permissão de \"Acessibilidade\" nas Configurações do macOS."),
+    ("config_input", "Para controle por teclado, conceda ao George a permissão de \"Monitoramento de Entrada\" nas Configurações do macOS."),
+    ("config_microphone", "Para transmitir o áudio deste computador, conceda ao George a permissão de \"Gravar Áudio\"."),
+    ("install_daemon_tip", "Para conexões não assistidas, instale o serviço em segundo plano do George."),
+    ("doc_mac_permission", "https://georgedesk.com/ajuda/permissoes-macos"),
+    ("Install", "Instalar"),
+    ("Quit", "Sair"),
 ];
 
 const EN: &[(&str, &str)] = &[
@@ -111,6 +123,12 @@ const EN: &[(&str, &str)] = &[
     ("george_web_only_controller", "In the browser you can only control other computers."),
     ("Slogan_tip", "George — your remote support"),
     ("powered_by_me", ""),
+    ("config_screen", "To let others access this computer, grant George the \"Screen Recording\" permission in macOS Settings."),
+    ("config_acc", "To let someone control this computer, grant George the \"Accessibility\" permission in macOS Settings."),
+    ("config_input", "For keyboard control, grant George the \"Input Monitoring\" permission in macOS Settings."),
+    ("config_microphone", "To stream this computer's audio, grant George the \"Record Audio\" permission."),
+    ("install_daemon_tip", "For unattended access, install George's background service."),
+    ("doc_mac_permission", "https://georgedesk.com/ajuda/permissoes-macos"),
 ];
 
 fn lookup(table: &[(&str, &str)], name: &str) -> Option<String> {
@@ -124,12 +142,21 @@ fn lookup(table: &[(&str, &str)], name: &str) -> Option<String> {
 /// ex.: "pt-br", "en"). Retorna `None` quando a chave não é do George.
 pub fn translate(lang: &str, name: &str) -> Option<String> {
     let is_pt = lang == "br" || lang.starts_with("pt");
+    let is_en = lang == "en" || lang.starts_with("en");
+    // Chaves próprias do George (`george_*`) existem só aqui: sempre pt-BR, com
+    // en como fallback para qualquer outro idioma.
+    let is_george_key = name.starts_with("george_");
     if is_pt {
         if let Some(v) = lookup(PT_BR, name) {
             return Some(v);
         }
     }
-    lookup(EN, name)
+    if is_pt || is_en || is_george_key {
+        return lookup(EN, name);
+    }
+    // Para outros idiomas, só sobrescrevemos as chaves próprias do George;
+    // o resto fica com a tradução nativa do upstream.
+    None
 }
 
 #[cfg(test)]
@@ -142,6 +169,10 @@ mod tests {
         assert_eq!(translate("en", "george_invite").as_deref(), Some("Invite"));
         assert_eq!(translate("de", "george_invite").as_deref(), Some("Invite"));
         assert!(translate("pt-br", "Not a george key").is_none());
+        // override de chave upstream vale em pt/en, não em outros idiomas
+        assert!(translate("pt-br", "Configure").is_some());
+        assert!(translate("en", "Configure").is_some());
+        assert!(translate("de", "Configure").is_none());
     }
 
     #[test]
