@@ -245,7 +245,8 @@ web = '''  build-george-web:
 
 publish = '''  publish-george-release:
     name: Publish GitHub Release
-    if: ${{ inputs.upload-artifact && startsWith(inputs.upload-tag, 'v') }}
+    # publica com os alvos que passaram (!cancelled), só para tags v*
+    if: ${{ !cancelled() && inputs.upload-artifact && startsWith(inputs.upload-tag, 'v') }}
     needs: [build-for-windows-flutter, build-for-macOS, build-rustdesk-linux, build-appimage, build-george-web]
     runs-on: ubuntu-22.04
     # Sem `permissions:` aqui: num workflow reutilizável o job não pode pedir mais do que o
@@ -256,13 +257,25 @@ publish = '''  publish-george-release:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: George-*
-          path: release
+          path: dl
           merge-multiple: true
-      - name: Build manifest
+      - name: Stable asset names + manifest
         shell: bash
         run: |
+          # Nomes estáveis (sem versão) para https://github.com/<repo>/releases/latest/download/<arquivo>
+          mkdir -p release
+          ls -la dl
+          map() { local src; src=$(ls dl/$1 2>/dev/null | head -1) || true
+                  if [ -n "$src" ]; then cp "$src" "release/$2"; echo "ok  $2 <- $(basename "$src")"
+                  else echo "::warning::alvo ausente: $2"; echo "$2" >> missing.txt; fi; }
+          map 'George-*-windows-x86_64.exe'      George-windows-x86_64.exe
+          map 'George-*-windows-x86_64.msi'      George-windows-x86_64.msi
+          map 'George-*-macos-aarch64.dmg'       George-macos-aarch64.dmg
+          map 'George-*-macos-x86_64.dmg'        George-macos-x86_64.dmg
+          map 'George-*-linux-x86_64.deb'        George-linux-x86_64.deb
+          map 'George-*-linux-x86_64.AppImage'   George-linux-x86_64.AppImage
+          map 'George-*-web.zip'                 George-web.zip
           cd release
-          ls -la
           python3 - <<'EOF2'
           import json, os, hashlib
           ver = os.environ['VERSION']; tag = os.environ['TAG_NAME']
@@ -273,20 +286,24 @@ publish = '''  publish-george-release:
               h = hashlib.sha256(open(f,'rb').read()).hexdigest()
               plat = 'windows' if 'windows' in f else 'macos' if 'macos' in f else 'linux' if 'linux' in f else 'web'
               assets.append({'name': f, 'platform': plat, 'sha256': h, 'size': os.path.getsize(f),
-                             'url': f'https://github.com/{repo}/releases/download/{tag}/{f}'})
+                             'url': f'https://github.com/{repo}/releases/download/{tag}/{f}',
+                             'latest_url': f'https://github.com/{repo}/releases/latest/download/{f}'})
           json.dump({'version': ver, 'tag': tag,
                      'url': f'https://github.com/{repo}/releases/tag/{tag}', 'assets': assets},
-                    open(f'George-{ver}-manifest.json','w'), indent=2)
+                    open('George-manifest.json','w'), indent=2)
           EOF2
-          cat George-*-manifest.json
+          sha256sum George-* > SHA256SUMS.txt
+          cat George-manifest.json
+          test -n "$(ls George-* 2>/dev/null)"
       - name: Publish release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
           tag_name: ${{ env.TAG_NAME }}
-          name: George ${{ env.VERSION }}
+          name: George ${{ env.TAG_NAME }}
           prerelease: ${{ contains(env.TAG_NAME, '-') }}
           files: |
             release/George-*
+            release/SHA256SUMS.txt
 '''
 
 out = head + '\njobs:\n' + '\n'.join([bridge, topmost, win, mac, lin, app, web, publish])
