@@ -102,6 +102,8 @@ class _GeorgeHomeHeroState extends State<GeorgeHomeHero> {
             ],
           ),
         ),
+        const GeorgeThemeToggle(),
+        const SizedBox(width: 2),
         const GeorgeAccountButton(),
       ],
     );
@@ -428,5 +430,58 @@ class GeorgeAccountButton extends StatelessWidget {
         ),
       );
     });
+  }
+}
+
+/// GEORGE: alterna o tema (sistema → claro → escuro) no cabeçalho. Persiste a
+/// escolha (kCommConfKeyTheme) e aplica ao vivo via MyTheme.changeDarkMode.
+class GeorgeThemeToggle extends StatefulWidget {
+  const GeorgeThemeToggle({Key? key}) : super(key: key);
+
+  @override
+  State<GeorgeThemeToggle> createState() => _GeorgeThemeToggleState();
+}
+
+class _GeorgeThemeToggleState extends State<GeorgeThemeToggle> {
+  @override
+  Widget build(BuildContext context) {
+    final mode = MyTheme.getThemeModePreference();
+    IconData icon;
+    String label;
+    switch (mode) {
+      case ThemeMode.light:
+        icon = Icons.light_mode_outlined;
+        label = translate('george_theme_light');
+        break;
+      case ThemeMode.dark:
+        icon = Icons.dark_mode_outlined;
+        label = translate('george_theme_dark');
+        break;
+      case ThemeMode.system:
+      default:
+        icon = Icons.brightness_auto_outlined;
+        label = translate('george_theme_system');
+        break;
+    }
+    return Tooltip(
+      message: '${translate('george_theme')}: $label',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(GeorgeTokens.radiusSm),
+        onTap: () async {
+          final next = mode == ThemeMode.system
+              ? ThemeMode.light
+              : mode == ThemeMode.light
+                  ? ThemeMode.dark
+                  : ThemeMode.system;
+          await MyTheme.changeDarkMode(next);
+          if (mounted) setState(() {});
+        },
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Icon(icon, size: 20, color: GeorgeTheme.foreground(context)),
+        ),
+      ),
+    );
   }
 }
