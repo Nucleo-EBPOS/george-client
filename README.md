@@ -55,3 +55,30 @@ compilação (defaults = produção).
 ## Licença
 
 AGPL-3.0, como o upstream. Código-fonte: https://github.com/Nucleo-EBPOS/george-client
+
+## Assinatura de código (atual e o que falta)
+
+Hoje os binários saem **sem assinatura oficial**:
+
+- **macOS:** o build assina o `George.app` **ad-hoc** (`codesign --force --deep -s -`) antes de
+  montar o `.dmg`. Isso faz o app **rodar no Apple Silicon** (sem a ad-hoc o Gatekeeper mata o
+  binário e o Finder diz *"o aplicativo está danificado"*). Na 1ª abertura o usuário ainda vê
+  *"desenvolvedor não identificado"* → **botão direito ▸ Abrir** (ou `xattr -dr com.apple.quarantine George.app`).
+- **Windows:** o `.exe`/`.msi` não têm Authenticode → o **SmartScreen** alerta na 1ª execução.
+
+### Para remover os avisos de vez (necessário para distribuir/vender)
+
+- **macOS — Apple Developer (conta paga, US$99/ano):** criar os secrets no repositório e o
+  workflow já usa os passos de assinatura+notarização reais (herdados do upstream):
+  `MACOS_P12_BASE64` (certificado *Developer ID Application* em base64), `MACOS_P12_PASSWORD`,
+  `MACOS_CODESIGN_IDENTITY` (ex.: `Developer ID Application: Nome (TEAMID)`) e
+  `MACOS_NOTARIZE_JSON` (chave da App Store Connect API para `rcodesign notary-submit`).
+  Com eles presentes, o passo *"Codesign app and create signed dmg"* assina com Developer ID e
+  **notariza/staple** o dmg → sem avisos.
+- **Windows — certificado de code signing (preferência EV):** adicionar a assinatura
+  (ex.: `signtool`/azure-code-signing) ao passo de empacotamento; sem isso o SmartScreen persiste
+  até o app ganhar reputação. Os hooks de assinatura do upstream (`SIGN_BASE_URL`/`SIGN_SECRET_KEY`)
+  foram removidos do fork; reintroduzir com o provedor escolhido.
+
+Enquanto não houver contas, a ad-hoc (macOS) + instruções ao usuário (botão direito ▸ Abrir /
+"Executar mesmo assim" no SmartScreen) é o caminho suportado.

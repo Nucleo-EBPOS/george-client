@@ -160,6 +160,26 @@ mac = drop_steps(mac, {'Test verified updates', 'Upload signed macOS DMG', 'Publ
 mac = mac.replace('RustDesk.app', 'George.app').replace('Release/George.app/Contents/MacOS/RustDesk', 'Release/George.app/Contents/MacOS/George')
 mac = mac.replace('rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg', 'George-${{ env.VERSION }}-macos-${{ matrix.job.arch }}.dmg')
 mac = mac.replace('rustdesk-${{ env.VERSION }}.dmg', 'George-${{ env.VERSION }}-macos-${{ matrix.job.arch }}.dmg')
+
+# GEORGE: assinatura ad-hoc (gratis, sem conta Apple) logo antes de montar o dmg sem assinatura.
+# Sem nenhuma assinatura, o Gatekeeper do Apple Silicon mata o binario e o Finder diz
+# "o aplicativo esta danificado". Ad-hoc faz rodar (ainda aparece "desenvolvedor nao
+# identificado" na 1a vez -> botao direito . Abrir). Assinatura/notarizacao real: ver README.
+mac = must_replace(mac,
+'''          sed -i -e 's/MAXIMUM_UNMOUNTING_ATTEMPTS=3/MAXIMUM_UNMOUNTING_ATTEMPTS=7/' "$CREATE_DMG"
+          create-dmg --icon "George.app" 200 190 --hide-extension "George.app" --window-size 800 400 --app-drop-link 600 185 George-${{ env.VERSION }}-macos-${{ matrix.job.arch }}.dmg ./flutter/build/macos/Build/Products/Release/George.app
+
+      - name: Codesign app and create signed dmg''',
+'''          sed -i -e 's/MAXIMUM_UNMOUNTING_ATTEMPTS=3/MAXIMUM_UNMOUNTING_ATTEMPTS=7/' "$CREATE_DMG"
+          APP=./flutter/build/macos/Build/Products/Release/George.app
+          # assina binarios aninhados (ex.: helper `service`) e depois o bundle inteiro, ad-hoc
+          find "$APP/Contents" -type f -perm -u+x -exec /usr/bin/codesign --force -s - {} + || true
+          /usr/bin/codesign --force --deep -s - "$APP"
+          /usr/bin/codesign -dv --verbose=4 "$APP" || true
+          /usr/bin/codesign --verify --deep --strict "$APP"
+          create-dmg --icon "George.app" 200 190 --hide-extension "George.app" --window-size 800 400 --app-drop-link 600 185 George-${{ env.VERSION }}-macos-${{ matrix.job.arch }}.dmg "$APP"
+
+      - name: Codesign app and create signed dmg''')
 mac = mac.rstrip('\n') + '''
 
       - name: Upload George macOS DMG
@@ -293,7 +313,7 @@ publish = '''  publish-george-release:
           cd release
           python3 - <<'EOF2'
           import json, os, hashlib
-          ver = os.environ['VERSION']; tag = os.environ['TAG_NAME']
+          tag = os.environ['TAG_NAME']; ver = tag[1:] if tag.startswith('v') else tag
           repo = os.environ['GITHUB_REPOSITORY']
           assets = []
           for f in sorted(os.listdir('.')):

@@ -760,7 +760,9 @@ pub fn get_new_version() -> String {
 
 #[inline]
 pub fn get_version() -> String {
-    crate::VERSION.to_owned()
+    // GEORGE: a UI (tela "Sobre") mostra a versão do produto George (tag do release),
+    // não a versão do motor RustDesk usada na negociação entre peers.
+    crate::george::version().to_owned()
 }
 
 #[cfg(any(target_os = "android", target_os = "ios", feature = "flutter"))]
