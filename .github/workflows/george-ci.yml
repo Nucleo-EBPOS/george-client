@@ -1,4 +1,4 @@
-# GEORGE: CI de verificação (compila tudo, sem publicar) em PRs para master
+# GEORGE: CI de PR — compila Windows/macOS/Linux/web e sobe os artefatos (sem publicar release)
 name: George CI
 
 on:
@@ -9,10 +9,18 @@ on:
       - "docs/**"
       - "**.md"
 
+permissions:
+  contents: read
+
+concurrency:
+  group: george-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     uses: ./.github/workflows/george-build.yml
     secrets: inherit
     with:
-      upload-artifact: false
+      # artefatos são enviados (upload-artifact) para teste; o publish só roda com tag v*
+      upload-artifact: true
       upload-tag: "ci"

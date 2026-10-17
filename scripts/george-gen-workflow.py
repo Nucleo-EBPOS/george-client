@@ -237,8 +237,9 @@ publish = '''  publish-george-release:
     if: ${{ inputs.upload-artifact && startsWith(inputs.upload-tag, 'v') }}
     needs: [build-for-windows-flutter, build-for-macOS, build-rustdesk-linux, build-appimage, build-george-web]
     runs-on: ubuntu-22.04
-    permissions:
-      contents: write
+    # Sem `permissions:` aqui: num workflow reutilizável o job não pode pedir mais do que o
+    # chamador concede (pedir `contents: write` sob um caller read-only = startup_failure).
+    # Quem concede `contents: write` é o george-release.yml.
     steps:
       - name: Download all George artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1

@@ -13,12 +13,14 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]+-*'
 
+# O job de publish do george-build.yml cria o GitHub Release: precisa de contents: write.
+permissions:
+  contents: write
+
 jobs:
   build:
     uses: ./.github/workflows/george-build.yml
     secrets: inherit
-    permissions:
-      contents: write
     with:
       upload-artifact: true
       upload-tag: ${{ github.ref_type == 'tag' && github.ref_name || inputs.upload-tag }}
