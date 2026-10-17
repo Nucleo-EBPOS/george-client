@@ -1,14 +1,14 @@
 [Desktop Entry]
-Name=RustDesk
-GenericName=Remote Desktop
-Comment=Remote Desktop
+Name=George
+GenericName=Remote Support
+Comment=George - your remote support
 Exec=rustdesk %u
 Icon=rustdesk
 Terminal=false
 Type=Application
 StartupNotify=true
 Categories=Network;RemoteAccess;GTK;
-Keywords=internet;linux;dart;rust;remote-control;p2p;teamviewer;rust-lang;rdp;remote-desktop;vnc;
+Keywords=george;remote;support;remote-desktop;acesso-remoto;suporte;
 Actions=new-window;
 StartupWMClass=rustdesk
 

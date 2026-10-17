@@ -357,16 +357,19 @@ def generate_control_file(version):
     control_file_path = "../res/DEBIAN/control"
     system2('/bin/rm -rf %s' % control_file_path)
 
-    content = """Package: rustdesk
+    # GEORGE: pacote renomeado; conflita com o rustdesk upstream (mesmos caminhos).
+    content = """Package: george
+Conflicts: rustdesk
+Replaces: rustdesk
 Section: net
 Priority: optional
 Version: %s
 Architecture: %s
-Maintainer: rustdesk <info@rustdesk.com>
-Homepage: https://rustdesk.com
+Maintainer: George <suporte@georgedesk.com>
+Homepage: https://georgedesk.com
 Depends: libgtk-3-0t64 | libgtk-3-0, libxcb-randr0, libxdo3 | libxdo4, libxfixes3, libxcb-shape0, libxcb-xfixes0, libasound2t64 | libasound2, libsystemd0, curl, libva2, libva-drm2, libva-x11-2, libgstreamer-plugins-base1.0-0, gstreamer1.0-pipewire%s
 Recommends: libayatana-appindicator3-1
-Description: A remote control software.
+Description: George - your remote support (remote desktop).
 
 """ % (version, get_deb_arch(), get_deb_extra_depends())
     file = open(control_file_path, "w")
@@ -946,10 +949,10 @@ def build_flutter_dmg(version, features):
     mac_arch = 'arm64' if platform.machine().lower() in ('arm64', 'aarch64') else 'x86_64'
     system2(
         f'FLUTTER_XCODE_ARCHS={mac_arch} FLUTTER_XCODE_ONLY_ACTIVE_ARCH=YES flutter build macos --release')
-    system2('cp -rf ../target/release/service ./build/macos/Build/Products/Release/RustDesk.app/Contents/MacOS/')
+    system2('cp -rf ../target/release/service ./build/macos/Build/Products/Release/George.app/Contents/MacOS/')
     '''
     system2(
-        "create-dmg --volname \"RustDesk Installer\" --window-pos 200 120 --window-size 800 400 --icon-size 100 --app-drop-link 600 185 --icon RustDesk.app 200 190 --hide-extension RustDesk.app rustdesk.dmg ./build/macos/Build/Products/Release/RustDesk.app")
+        "create-dmg --volname \"RustDesk Installer\" --window-pos 200 120 --window-size 800 400 --icon-size 100 --app-drop-link 600 185 --icon George.app 200 190 --hide-extension George.app rustdesk.dmg ./build/macos/Build/Products/Release/George.app")
     os.rename("rustdesk.dmg", f"../rustdesk-{version}.dmg")
     '''
     os.chdir("..")
@@ -1109,9 +1112,9 @@ def main():
             system2('cargo --locked bundle --release --features ' + features)
             if osx:
                 system2(
-                    'strip target/release/bundle/osx/RustDesk.app/Contents/MacOS/rustdesk')
+                    'strip target/release/bundle/osx/George.app/Contents/MacOS/rustdesk')
                 system2(
-                    'cp libsciter.dylib target/release/bundle/osx/RustDesk.app/Contents/MacOS/')
+                    'cp libsciter.dylib target/release/bundle/osx/George.app/Contents/MacOS/')
                 # https://github.com/sindresorhus/create-dmg
                 system2('/bin/rm -rf *.dmg')
                 pa = os.environ.get('P')
@@ -1119,15 +1122,15 @@ def main():
                     system2('''
     # buggy: rcodesign sign ... path/*, have to sign one by one
     # install rcodesign via cargo install apple-codesign
-    #rcodesign sign --p12-file ~/.p12/rustdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/RustDesk.app/Contents/MacOS/rustdesk
-    #rcodesign sign --p12-file ~/.p12/rustdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/RustDesk.app/Contents/MacOS/libsciter.dylib
-    #rcodesign sign --p12-file ~/.p12/rustdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/RustDesk.app
+    #rcodesign sign --p12-file ~/.p12/rustdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/George.app/Contents/MacOS/rustdesk
+    #rcodesign sign --p12-file ~/.p12/rustdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/George.app/Contents/MacOS/libsciter.dylib
+    #rcodesign sign --p12-file ~/.p12/rustdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/George.app
     # goto "Keychain Access" -> "My Certificates" for below id which starts with "Developer ID Application:"
-    codesign -s "Developer ID Application: {0}" --force --options runtime  ./target/release/bundle/osx/RustDesk.app/Contents/MacOS/*
-    codesign -s "Developer ID Application: {0}" --force --options runtime  ./target/release/bundle/osx/RustDesk.app
+    codesign -s "Developer ID Application: {0}" --force --options runtime  ./target/release/bundle/osx/George.app/Contents/MacOS/*
+    codesign -s "Developer ID Application: {0}" --force --options runtime  ./target/release/bundle/osx/George.app
     '''.format(pa))
                 system2(
-                    'create-dmg "RustDesk %s.dmg" "target/release/bundle/osx/RustDesk.app"' % version)
+                    'create-dmg "RustDesk %s.dmg" "target/release/bundle/osx/George.app"' % version)
                 os.rename('RustDesk %s.dmg' %
                           version, 'rustdesk-%s.dmg' % version)
                 if pa:
@@ -1142,7 +1145,7 @@ def main():
     # https://gregoryszorc.com/docs/apple-codesign/stable/apple_codesign_getting_started.html#apple-codesign-app-store-connect-api-key
     # p8 file is generated when you generate api key (can download only once)
     rcodesign notary-submit --api-key-path ../.p12/api-key.json  --staple rustdesk-{1}.dmg
-    # verify:  spctl -a -t exec -v /Applications/RustDesk.app
+    # verify:  spctl -a -t exec -v /Applications/George.app
     '''.format(pa, version))
                 else:
                     print('Not signed')
