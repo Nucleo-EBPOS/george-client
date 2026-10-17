@@ -176,6 +176,19 @@ lin = need('build-rustdesk-linux')
 lin = drop_matrix_entry(lin, 'target: aarch64-unknown-linux-gnu')
 lin = must_replace(lin, '  build-rustdesk-linux:\n    needs: [generate-bridge]\n    name: build rustdesk linux ${{ matrix.job.target }}\n',
                    '  build-rustdesk-linux:\n    needs: [generate-bridge]\n    name: George Linux ${{ matrix.job.arch }}\n')
+# GEORGE: o build Linux roda em container; repassa as variáveis do George para o cargo
+lin = must_replace(lin, '''          dockerRunArgs: |
+            --volume "${PWD}:/workspace"
+            --volume "/opt/artifacts:/opt/artifacts"
+''', '''          dockerRunArgs: |
+            --volume "${PWD}:/workspace"
+            --volume "/opt/artifacts:/opt/artifacts"
+            --env GEORGE_VERSION=${{ env.GEORGE_VERSION }}
+            --env RENDEZVOUS_SERVER=${{ env.RENDEZVOUS_SERVER }}
+            --env RELAY_SERVER=${{ env.RELAY_SERVER }}
+            --env API_SERVER=${{ env.API_SERVER }}
+            --env RS_PUB_KEY=${{ env.RS_PUB_KEY }}
+''')
 # corta rpm/arch do script de build (só deb)
 i = lin.index('            # rpm package\n')
 j = lin.index('      - name: Publish debian/rpm package')

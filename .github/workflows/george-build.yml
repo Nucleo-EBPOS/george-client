@@ -770,6 +770,11 @@ jobs:
           dockerRunArgs: |
             --volume "${PWD}:/workspace"
             --volume "/opt/artifacts:/opt/artifacts"
+            --env GEORGE_VERSION=${{ env.GEORGE_VERSION }}
+            --env RENDEZVOUS_SERVER=${{ env.RENDEZVOUS_SERVER }}
+            --env RELAY_SERVER=${{ env.RELAY_SERVER }}
+            --env API_SERVER=${{ env.API_SERVER }}
+            --env RS_PUB_KEY=${{ env.RS_PUB_KEY }}
           shell: /bin/bash
           install: |
             apt-get update -y
