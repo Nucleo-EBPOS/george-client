@@ -52,7 +52,11 @@ pub fn dev_server_unlocked() -> bool {
 /// mobile). Idempotente.
 pub fn apply() {
     *config::APP_NAME.write().unwrap() = APP_NAME.to_owned();
-    *config::ORG.write().unwrap() = ORG.to_owned();
+    // `config::ORG` só existe no macOS (bundle id / LaunchAgents).
+    #[cfg(target_os = "macos")]
+    {
+        *config::ORG.write().unwrap() = ORG.to_owned();
+    }
     *config::PROD_RENDEZVOUS_SERVER.write().unwrap() = RENDEZVOUS_SERVER.to_owned();
 
     if !dev_server_unlocked() {
