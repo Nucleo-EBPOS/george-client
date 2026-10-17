@@ -966,8 +966,12 @@ jobs:
       - name: Rename and upload George AppImage
         shell: bash
         run: |
-          ls -la appimage/*.AppImage
-          mv appimage/rustdesk-${{ env.VERSION }}-*.AppImage George-${{ env.VERSION }}-linux-${{ matrix.job.arch }}.AppImage
+          # o nome gerado pelo appimage-builder varia (app_info.name/versão/arch); pega o único .AppImage
+          f=$(find appimage -maxdepth 3 -name '*.AppImage' -type f | head -1)
+          if [ -z "$f" ]; then echo "::error::nenhum .AppImage gerado"; ls -laR appimage | head -80; exit 1; fi
+          echo "AppImage gerado: $f"
+          sudo mv "$f" George-${{ env.VERSION }}-linux-${{ matrix.job.arch }}.AppImage
+          sudo chown "$(id -u):$(id -g)" George-${{ env.VERSION }}-linux-${{ matrix.job.arch }}.AppImage
       - name: Upload George AppImage artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
