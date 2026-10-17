@@ -1,0 +1,11 @@
+name: George probe4 appnoif
+on:
+  pull_request:
+    branches: [master]
+jobs:
+  appnoif:
+    uses: ./.github/workflows/george-probe-build-appnoif.yml
+    secrets: inherit
+    with:
+      upload-artifact: false
+      upload-tag: "ci"

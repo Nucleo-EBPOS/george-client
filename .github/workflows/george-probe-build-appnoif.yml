@@ -1,5 +1,5 @@
 # GEORGE: gerado por scripts/george-gen-workflow.py a partir de flutter-build.yml. Não edite à mão.
-name: George probe build appif
+name: George probe build appnoif
 
 on:
   workflow_call:
@@ -104,7 +104,6 @@ jobs:
     name: George AppImage ${{ matrix.job.arch }}
     needs: [build-george-web]
     runs-on: ubuntu-22.04
-    if: ${{ inputs.upload-artifact }}
     strategy:
       fail-fast: false
       matrix:

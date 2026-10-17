@@ -1,0 +1,11 @@
+name: George probe4 app
+on:
+  pull_request:
+    branches: [master]
+jobs:
+  app:
+    uses: ./.github/workflows/george-probe-build-app.yml
+    secrets: inherit
+    with:
+      upload-artifact: false
+      upload-tag: "ci"
