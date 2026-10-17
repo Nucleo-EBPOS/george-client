@@ -1,0 +1,12 @@
+name: George probe (called)
+on:
+  workflow_call:
+    inputs:
+      flag:
+        type: boolean
+        default: true
+jobs:
+  echo:
+    runs-on: ubuntu-22.04
+    steps:
+      - run: echo "called ok flag=${{ inputs.flag }}"
