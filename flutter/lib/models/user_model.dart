@@ -254,12 +254,26 @@ class UserModel {
     }
     for (final item in ops) {
       if (item.startsWith('common-oidc/')) {
-        return jsonDecode(item.substring('common-oidc/'.length));
+        // GEORGE: remove provedores não suportados (ex.: webauth/passkey).
+        final List<dynamic> list =
+            jsonDecode(item.substring('common-oidc/'.length)) as List<dynamic>;
+        list.removeWhere((e) => e is Map &&
+            georgeIsUnsupportedLoginOption(e['name']?.toString()));
+        return list;
       }
     }
+    // GEORGE: a george-api não implementa WebAuthn/passkey; filtra a opção
+    // comum ('common-oidc/...') para não mostrar botão que leva a endpoint inexistente.
     return ops
         .where((item) => item.startsWith('oidc/'))
         .map((item) => {'name': item.substring('oidc/'.length)})
+        .where((e) => !georgeIsUnsupportedLoginOption(e['name']))
         .toList();
+  }
+
+  // GEORGE
+  static bool georgeIsUnsupportedLoginOption(String? name) {
+    final n = (name ?? '').toLowerCase();
+    return n.contains('webauth') || n.contains('passkey') || n.contains('fido');
   }
 }
