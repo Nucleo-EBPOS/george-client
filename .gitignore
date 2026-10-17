@@ -60,3 +60,12 @@ flutter/web/
 /third_party/libdrmtap/
 # Local git worktrees
 .worktrees/
+
+# GEORGE: assets de marca versionados (o upstream ignora logos/ícones de custom client)
+!flutter/assets/icon.png
+!flutter/assets/logo.png
+!flutter/assets/logo_light.png
+!flutter/assets/logo_dark.png
+!flutter/assets/george/
+!flutter/assets/george/**
+!web-landing/**

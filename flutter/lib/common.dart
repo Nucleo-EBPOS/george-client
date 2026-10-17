@@ -1,3 +1,6 @@
+import 'package:flutter_hbb/george/george_config.dart'; // GEORGE
+import 'package:flutter_hbb/george/george_deep_link.dart'; // GEORGE
+import 'package:flutter_hbb/george/george_theme.dart'; // GEORGE
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
@@ -248,17 +251,23 @@ class ColorThemeExtension extends ThemeExtension<ColorThemeExtension> {
 class MyTheme {
   MyTheme._();
 
+  // GEORGE: os temas upstream passam pelo mapeamento dos tokens do George
+  // (design-system/tokens.css) — ver lib/george/george_theme.dart.
+  static ThemeData lightTheme = GeorgeTheme.light(_upstreamLightTheme);
+  static ThemeData darkTheme = GeorgeTheme.dark(_upstreamDarkTheme);
+
   static const Color grayBg = Color(0xFFEFEFF2);
-  static const Color accent = Color(0xFF0071FF);
-  static const Color accent50 = Color(0x770071FF);
-  static const Color accent80 = Color(0xAA0071FF);
+  // GEORGE: acento dourado (tokens: --g-gold-deep / --g-gold).
+  static const Color accent = Color(0xFFB8831A);
+  static const Color accent50 = Color(0x77B8831A);
+  static const Color accent80 = Color(0xAAB8831A);
   static const Color canvasColor = Color(0xFF212121);
   static const Color border = Color(0xFFCCCCCC);
-  static const Color idColor = Color(0xFF00B6F0);
+  static const Color idColor = Color(0xFFE8B23A); // GEORGE
   static const Color darkGray = Color.fromARGB(255, 148, 148, 148);
   static const Color cmIdColor = Color(0xFF21790B);
   static const Color dark = Colors.black87;
-  static const Color button = Color(0xFF2C8CFF);
+  static const Color button = Color(0xFFB8831A); // GEORGE
   static const Color hoverBorder = Color(0xFF999999);
 
   // ListTile
@@ -369,7 +378,7 @@ class MyTheme {
     }),
   );
 
-  static ThemeData lightTheme = ThemeData(
+  static ThemeData _upstreamLightTheme = ThemeData(
     // https://stackoverflow.com/questions/77537315/after-upgrading-to-flutter-3-16-the-app-bar-background-color-button-size-and
     useMaterial3: false,
     brightness: Brightness.light,
@@ -468,7 +477,7 @@ class MyTheme {
       TabbarTheme.light,
     ],
   );
-  static ThemeData darkTheme = ThemeData(
+  static ThemeData _upstreamDarkTheme = ThemeData(
     useMaterial3: false,
     brightness: Brightness.dark,
     hoverColor: Color.fromARGB(255, 45, 46, 53),
@@ -2254,6 +2263,11 @@ setEnvTerminalAdmin() {
 
 // uri link handler
 bool handleUriLink({List<String>? cmdArgs, Uri? uri, String? uriString}) {
+  // GEORGE: george://connect?code=… | ?id=&pw=
+  if (georgeTryHandleUriLink(
+      cmdArgs: cmdArgs, uri: uri, uriString: uriString)) {
+    return true;
+  }
   List<String>? args;
   if (cmdArgs != null && cmdArgs.isNotEmpty) {
     args = cmdArgs;
@@ -4067,7 +4081,8 @@ void earlyAssert() {
 
 void checkUpdate() {
   if (!isWeb) {
-    if (!bind.isCustomClient()) {
+    // GEORGE: o George checa atualização mesmo sendo "custom client".
+    if (GeorgeConfig.checksUpdates || !bind.isCustomClient()) {
       platformFFI.registerEventHandler(
           kCheckSoftwareUpdateFinish, kCheckSoftwareUpdateFinish,
           (Map<String, dynamic> evt) async {

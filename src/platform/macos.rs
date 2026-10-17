@@ -395,13 +395,9 @@ fn write_plist_atomically(path: &str, body: &str) -> ResultType<()> {
 }
 
 pub fn write_plists() -> ResultType<()> {
-    let daemon_plist_path = format!(
-        "/Library/LaunchDaemons/com.carriez.{}_service.plist",
-        crate::get_app_name()
+    let daemon_plist_path = format!("/Library/LaunchDaemons/{}.{}_service.plist", crate::george::ORG, crate::get_app_name()
     );
-    let agent_plist_path = format!(
-        "/Library/LaunchAgents/com.carriez.{}_server.plist",
-        crate::get_app_name()
+    let agent_plist_path = format!("/Library/LaunchAgents/{}.{}_server.plist", crate::george::ORG, crate::get_app_name()
     );
     let Some(daemon_plist) = PRIVILEGES_SCRIPTS_DIR.get_file("daemon.plist") else {
         bail!("daemon.plist not found in embedded resources");
@@ -1183,8 +1179,8 @@ pub fn update_from_dmg_as_root(dmg_path: &str, expected_version: &str) -> Result
         use std::os::unix::fs::PermissionsExt;
         std::fs::set_permissions(&tmp_dir, std::fs::Permissions::from_mode(0o700))?;
     }
-    let agent_plist = format!("/Library/LaunchAgents/com.carriez.{}_server.plist", app_name);
-    let daemon_plist = format!("/Library/LaunchDaemons/com.carriez.{}_service.plist", app_name);
+    let agent_plist = format!("/Library/LaunchAgents/{}.{}_server.plist", crate::george::ORG, app_name);
+    let daemon_plist = format!("/Library/LaunchDaemons/{}.{}_service.plist", crate::george::ORG, app_name);
 
     log::info!("[root-update] Starting silent root update from {}", dmg_path);
     // Check sessions before extracting to avoid unnecessary work
@@ -1316,8 +1312,8 @@ pub fn update_from_dmg_as_root(dmg_path: &str, expected_version: &str) -> Result
     // Write a shell script that runs detached after this function returns.
     // We cannot directly replace /Applications/RustDesk.app while it is running,
     // so we spawn a script that waits, kills processes, copies, and restarts.
-    let daemon_label = format!("com.carriez.{}_service", app_name);
-    let agent_label = format!("com.carriez.{}_server", app_name);
+    let daemon_label = format!("{}.{}_service", crate::george::ORG, app_name);
+    let agent_label = format!("{}.{}_server", crate::george::ORG, app_name);
     let script_path = format!("{}/rustdesk_update.sh", tmp_dir);
     let script = format!(
         r#"#!/bin/sh

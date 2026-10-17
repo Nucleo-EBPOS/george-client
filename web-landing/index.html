@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>George — your remote support</title>
+<meta name="description" content="Abra um convite do George ou baixe o aplicativo.">
+<link rel="icon" href="favicon.png">
+<style>
+  :root{--g-gold:#E8B23A;--g-gold-2:#F7D56B;--g-gold-deep:#B8831A;--g-ink:#0B0B0D;--g-ink-3:#17171A;--g-paper:#F6F4EF;
+    --radius:14px;--radius-lg:20px;--ease-out:cubic-bezier(.16,1,.3,1);
+    --background:var(--g-ink);--foreground:#ECEAE4;--muted-foreground:#9B998F;--border:rgba(255,255,255,.08);
+    --glass-bg:rgba(23,23,26,.62);--glass-border:rgba(255,255,255,.10);--primary:var(--g-gold);--primary-foreground:#1A1304;
+    --input:rgba(255,255,255,.10);--success:#3FB950;--destructive:#F0544F}
+  @media (prefers-color-scheme: light){:root{--background:var(--g-paper);--foreground:#17171A;--muted-foreground:#6B6860;--border:rgba(0,0,0,.08);
+    --glass-bg:rgba(255,255,255,.60);--glass-border:rgba(255,255,255,.65);--primary:var(--g-gold-deep);--primary-foreground:#fff;--input:rgba(0,0,0,.10);--success:#2E9B45;--destructive:#D5382F}}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--background);color:var(--foreground);
+    background-image:radial-gradient(120% 70% at 50% -10%,rgba(232,178,58,.16),transparent 60%);display:flex;flex-direction:column;align-items:center;padding:24px 16px}
+  main{width:100%;max-width:560px;margin-top:6vh}
+  .logo{height:44px;display:block;margin:0 auto 6px}
+  .logo.dark{display:none}
+  @media (prefers-color-scheme: dark){.logo.light{display:none}.logo.dark{display:block}}
+  .tag{text-align:center;color:var(--muted-foreground);font-size:14px;margin:0 0 28px;letter-spacing:.2px}
+  .card{background:var(--glass-bg);border:1px solid var(--glass-border);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);
+    border-radius:var(--radius-lg);padding:22px;box-shadow:0 1px 2px rgba(0,0,0,.25),0 8px 24px -12px rgba(0,0,0,.45);animation:rise .42s var(--ease-out) both;margin-bottom:14px}
+  @keyframes rise{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.card{animation:none}}
+  h1{font-size:20px;margin:0 0 6px}
+  h2{font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted-foreground);margin:0 0 10px;font-weight:600}
+  p{line-height:1.5;margin:0 0 12px;font-size:15px}
+  .code{font:700 34px/1.1 ui-monospace,"SF Mono",Menlo,Consolas,monospace;letter-spacing:6px;color:var(--primary);word-break:break-all}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:var(--radius);font-weight:600;font-size:15px;
+    text-decoration:none;cursor:pointer;border:1px solid var(--border);color:var(--foreground);background:transparent;transition:transform .22s var(--ease-out),box-shadow .22s var(--ease-out)}
+  .btn:hover{transform:translateY(-1px)}
+  .btn.primary{background:var(--primary);color:var(--primary-foreground);border-color:transparent;box-shadow:0 10px 40px -10px rgba(232,178,58,.45)}
+  .btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+  input{width:100%;min-height:44px;border-radius:10px;border:1px solid var(--border);background:var(--input);color:var(--foreground);padding:0 14px;font-size:16px;letter-spacing:2px;text-transform:uppercase}
+  input:focus{outline:2px solid var(--primary);outline-offset:1px}
+  .muted{color:var(--muted-foreground);font-size:13px}
+  .status{display:flex;align-items:center;gap:8px;font-size:14px;margin-top:8px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted-foreground)}
+  .dot.ok{background:var(--success)}.dot.err{background:var(--destructive)}
+  footer{margin-top:auto;padding-top:28px;font-size:12px;color:var(--muted-foreground);text-align:center}
+  footer a{color:inherit}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<main>
+  <img class="logo light" src="george-logo.png" alt="George">
+  <img class="logo dark" src="george-logo-white.png" alt="George">
+  <p class="tag">your remote support</p>
+
+  <section class="card" id="invite" aria-live="polite">
+    <h2 id="invite-title">Convite</h2>
+    <div class="code" id="code">—</div>
+    <div class="status"><span class="dot" id="dot"></span><span id="status">Abrindo o George neste computador…</span></div>
+    <div class="row">
+      <a class="btn primary" id="open" href="#">Abrir no George</a>
+      <button class="btn" id="copy" type="button">Copiar código</button>
+    </div>
+    <p class="muted" style="margin-top:12px">Se o George não abrir sozinho, instale o aplicativo abaixo e cole o código no campo <strong>Conectar</strong>.</p>
+  </section>
+
+  <section class="card hidden" id="enter">
+    <h2>Tenho um código de convite</h2>
+    <form id="form">
+      <label class="muted" for="codeInput">Código</label>
+      <input id="codeInput" autocomplete="off" inputmode="latin" placeholder="AB7K2" aria-label="Código do convite">
+      <div class="row"><button class="btn primary" type="submit">Abrir no George</button></div>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Baixar o George</h2>
+    <p>Instale uma vez; não precisa configurar servidor nem conta para receber suporte.</p>
+    <div class="row">
+      <a class="btn" id="dl-win" href="https://github.com/Nucleo-EBPOS/george-client/releases/latest">Windows</a>
+      <a class="btn" id="dl-mac" href="https://github.com/Nucleo-EBPOS/george-client/releases/latest">macOS</a>
+      <a class="btn" id="dl-linux" href="https://github.com/Nucleo-EBPOS/george-client/releases/latest">Linux</a>
+    </div>
+    <p class="muted" style="margin-top:12px">Versão __GEORGE_VERSION__ · O acesso pelo navegador (web client) chega em uma próxima versão.</p>
+  </section>
+</main>
+<footer>
+  <a href="https://georgedesk.com">georgedesk.com</a> · <a href="https://georgedesk.com/privacidade">Privacidade</a> ·
+  George é construído sobre o <a href="https://github.com/rustdesk/rustdesk">RustDesk</a> (AGPL-3.0) — <a href="https://github.com/Nucleo-EBPOS/george-client">código-fonte</a>
+</footer>
+<script>
+(function(){
+  var q = new URLSearchParams(location.search);
+  var code = (q.get('code')||'').trim().toUpperCase();
+  var id = (q.get('id')||'').trim(), pw = (q.get('pw')||q.get('password')||'').trim();
+  var deep = null;
+  if (code) deep = 'george://connect?code=' + encodeURIComponent(code);
+  else if (id) deep = 'george://connect?id=' + encodeURIComponent(id) + (pw ? '&pw=' + encodeURIComponent(pw) : '');
+  var $ = function(s){return document.getElementById(s)};
+  if (!deep) { $('invite').classList.add('hidden'); $('enter').classList.remove('hidden'); }
+  else {
+    $('code').textContent = code || id;
+    $('invite-title').textContent = code ? 'Convite' : 'Conectar ao ID';
+    $('open').href = deep;
+    $('copy').onclick = function(){ navigator.clipboard && navigator.clipboard.writeText(code||id).then(function(){ $('copy').textContent='Copiado'; }); };
+    // tenta abrir o app; se a página continuar visível, mostra orientação
+    var opened = false;
+    var t = setTimeout(function(){ if(!opened){ $('dot').className='dot err'; $('status').textContent='O George não abriu. Instale o aplicativo e use o código acima.'; } }, 2500);
+    document.addEventListener('visibilitychange', function(){ if (document.hidden){ opened = true; clearTimeout(t); $('dot').className='dot ok'; $('status').textContent='George aberto. Volte para o aplicativo.'; } });
+    try { location.href = deep; } catch(e){}
+  }
+  $('form').onsubmit = function(ev){ ev.preventDefault(); var c = $('codeInput').value.trim().toUpperCase(); if(c){ location.search = '?code=' + encodeURIComponent(c); } };
+  // links de download por plataforma a partir do último release
+  fetch('https://api.github.com/repos/Nucleo-EBPOS/george-client/releases/latest').then(function(r){return r.json()}).then(function(rel){
+    (rel.assets||[]).forEach(function(a){
+      var n=a.name||'';
+      if (/windows.*\.exe$/i.test(n)) $('dl-win').href=a.browser_download_url;
+      if (/macos.*aarch64.*\.dmg$/i.test(n)) $('dl-mac').href=a.browser_download_url;
+      if (/linux.*\.deb$/i.test(n)) $('dl-linux').href=a.browser_download_url;
+    });
+  }).catch(function(){});
+})();
+</script>
+</body>
+</html>

@@ -1,3 +1,4 @@
+import 'package:flutter_hbb/george/george_home.dart'; // GEORGE
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
@@ -80,17 +81,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final isOutgoingOnly = bind.isOutgoingOnly();
     final children = <Widget>[
       if (!isOutgoingOnly) buildPresetPasswordWarning(),
-      if (bind.isCustomClient())
-        Align(
-          alignment: Alignment.center,
-          child: loadPowered(context),
-        ),
-      Align(
-        alignment: Alignment.center,
-        child: loadLogo(),
-      ),
-      buildTip(context),
-      if (!isOutgoingOnly) buildIDBoard(context),
+      // GEORGE: cabeçalho redesenhado (logo, conta, ID, Modo Host, Conectar,
+      // Convidar). Substitui logo/dica/ID board do upstream.
+      GeorgeHomeHero(isOutgoingOnly: isOutgoingOnly),
       if (!isOutgoingOnly) buildPasswordBoard(context),
       FutureBuilder<Widget>(
         future: Future.value(
@@ -129,7 +122,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return ChangeNotifierProvider.value(
       value: gFFI.serverModel,
       child: Container(
-        width: isIncomingOnly ? 280.0 : 200.0,
+        width: isIncomingOnly ? 280.0 : kGeorgeLeftPaneWidth, // GEORGE
         color: Theme.of(context).colorScheme.background,
         child: Stack(
           children: [
