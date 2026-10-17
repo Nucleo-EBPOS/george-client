@@ -100,7 +100,14 @@ head = must_replace(head, '''  TAG_NAME: "${{ inputs.upload-tag }}"
 ''')
 
 # ---- generate-bridge / topmost ----
+# GEORGE: cópia do bridge.yml só com o bridge padrão (Flutter 3.22.3). A entrada 3.44 serve apenas
+# ao Windows arm64, que o George não compila; uma falha nela derrubava todo o `needs`.
+bsrc = (ROOT / '.github/workflows/bridge.yml').read_text()
+bsrc = drop_matrix_entry(bsrc, 'artifact-name: "bridge-artifact-flutter-3.44"')
+bsrc = '# GEORGE: gerado por scripts/george-gen-workflow.py a partir de bridge.yml. Não edite à mão.\n' + bsrc
+(ROOT / '.github/workflows/george-bridge.yml').write_text(bsrc)
 bridge = must_replace(need('generate-bridge'), '    needs: [validate-update-metadata-keys]\n', '')
+bridge = must_replace(bridge, 'uses: ./.github/workflows/bridge.yml', 'uses: ./.github/workflows/george-bridge.yml')
 topmost = must_replace(need('build-RustDeskTempTopMostWindow'), '    needs: [validate-update-metadata-keys]\n', '')
 topmost = drop_matrix_entry(topmost, 'target: windows-11-arm')
 
