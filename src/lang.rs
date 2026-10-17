@@ -244,6 +244,10 @@ pub fn translate_locale(name: String, locale: &str) -> String {
         "az" => az::T.deref(),
         _ => en::T.deref(),
     };
+    // GEORGE: overlay de traduções próprias (pt-BR/en) antes das tabelas upstream.
+    if let Some(v) = crate::george::lang::translate(&lang, &name) {
+        return v;
+    }
     let (name, placeholder_value) = extract_placeholder(&name);
     let replace = |s: &&str| {
         let mut s = s.to_string();

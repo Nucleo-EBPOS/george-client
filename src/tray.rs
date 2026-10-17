@@ -82,10 +82,11 @@ fn make_tray() -> hbb_common::ResultType<()> {
     }
     let tooltip = |count: usize| {
         if count == 0 {
+            // GEORGE: a bandeja mostra o estado do Modo Host.
             format!(
-                "{} {}",
+                "{} - {}",
                 crate::get_app_name(),
-                translate("Service is running".to_owned()),
+                crate::george::host_mode_status(),
             )
         } else {
             format!(
