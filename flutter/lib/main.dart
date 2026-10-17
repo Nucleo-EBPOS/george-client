@@ -1,3 +1,4 @@
+import 'package:flutter_hbb/george/george_deep_link.dart'; // GEORGE
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -182,6 +183,8 @@ void runMobileApp() async {
   await Future.wait([gFFI.abModel.loadCache(), gFFI.groupModel.loadCache()]);
   gFFI.userModel.refreshCurrentUser();
   runApp(App());
+  // GEORGE: web client aceita /web?code=… (e ?id=&pw=)
+  georgeHandleWebQuery();
   await initUniLinks();
 }
 
@@ -496,7 +499,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
           navigatorKey: globalKey,
           debugShowCheckedModeBanner: false,
           title: isWeb
-              ? '${bind.mainGetAppNameSync()} Web Client V2 (Preview)'
+              ? '${bind.mainGetAppNameSync()} Web' // GEORGE
               : bind.mainGetAppNameSync(),
           theme: MyTheme.lightTheme,
           darkTheme: MyTheme.darkTheme,

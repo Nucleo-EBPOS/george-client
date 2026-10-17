@@ -1,3 +1,4 @@
+import 'package:flutter_hbb/george/george_config.dart'; // GEORGE
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -2596,7 +2597,7 @@ class _AboutState extends State<_About> {
                       .marginSymmetric(vertical: 4.0)),
               InkWell(
                   onTap: () {
-                    launchUrlString('https://rustdesk.com/privacy.html');
+                    launchUrlString(GeorgeConfig.privacyUrl); // GEORGE
                   },
                   child: Text(
                     translate('Privacy Statement'),
@@ -2604,14 +2605,23 @@ class _AboutState extends State<_About> {
                   ).marginSymmetric(vertical: 4.0)),
               InkWell(
                   onTap: () {
-                    launchUrlString('https://rustdesk.com');
+                    launchUrlString(GeorgeConfig.siteUrl); // GEORGE
                   },
                   child: Text(
                     translate('Website'),
                     style: linkStyle,
                   ).marginSymmetric(vertical: 4.0)),
+              // GEORGE: crédito AGPL ao RustDesk (obrigatório pela licença).
+              InkWell(
+                  onTap: () {
+                    launchUrlString(GeorgeConfig.sourceUrl);
+                  },
+                  child: Text(
+                    '${translate('george_about_credit')} — ${translate('george_about_source')}',
+                    style: linkStyle,
+                  ).marginSymmetric(vertical: 4.0)),
               Container(
-                decoration: const BoxDecoration(color: Color(0xFF2c8cff)),
+                decoration: const BoxDecoration(color: MyTheme.accent),
                 padding:
                     const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
                 child: SelectionArea(
@@ -2622,7 +2632,7 @@ class _AboutState extends State<_About> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Copyright © ${DateTime.now().toString().substring(0, 4)} Purslane Tech Pte. Ltd.\n$license',
+                            '${GeorgeConfig.copyright}\n$license', // GEORGE
                             style: const TextStyle(color: Colors.white),
                           ),
                           Text(
