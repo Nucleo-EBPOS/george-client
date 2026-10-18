@@ -35,6 +35,48 @@ String georgeNormalizeEnrollCode(String s) {
 bool georgeLooksLikeEnrollCode(String s) =>
     _enrollCodeRe.hasMatch(s.trim().toUpperCase());
 
+/// Campo de texto padrão do George: mesma altura (48), borda e raio em todo
+/// lugar — e o botão ao lado acompanha a altura (ver [GeorgeInputRow]).
+InputDecoration georgeFieldDecoration(BuildContext context,
+    {String? hint, String? label, Widget? prefixIcon}) {
+  final r = BorderRadius.circular(GeorgeTokens.radiusSm);
+  final side = BorderSide(color: GeorgeTheme.border(context));
+  return InputDecoration(
+    hintText: hint,
+    labelText: label,
+    prefixIcon: prefixIcon,
+    isDense: true,
+    filled: false,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+    border: OutlineInputBorder(borderRadius: r, borderSide: side),
+    enabledBorder: OutlineInputBorder(borderRadius: r, borderSide: side),
+    disabledBorder: OutlineInputBorder(borderRadius: r, borderSide: side),
+    focusedBorder: OutlineInputBorder(
+        borderRadius: r,
+        borderSide: BorderSide(color: GeorgeTheme.primary(context), width: 1.5)),
+  );
+}
+
+/// Campo + botão lado a lado, sempre com a mesma altura.
+class GeorgeInputRow extends StatelessWidget {
+  const GeorgeInputRow({Key? key, required this.field, required this.button})
+      : super(key: key);
+  final Widget field;
+  final Widget button;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Expanded(child: field),
+        const SizedBox(width: 8),
+        button,
+      ]),
+    );
+  }
+}
+
 class GeorgeEnrollController extends GetxController {
   static GeorgeEnrollController get to {
     if (!Get.isRegistered<GeorgeEnrollController>()) {
@@ -309,7 +351,9 @@ class _GeorgeSetupDialogState extends State<_GeorgeSetupDialog> {
           icon: Icons.power_settings_new,
           title: translate('george_unattended_title'),
           desc: installed
-              ? translate('george_unattended_desc')
+              ? translate(isWindows
+                  ? 'george_unattended_desc'
+                  : 'george_unattended_desc_other')
               : translate('george_unattended_need_install'),
           trailing: Switch(
             value: h.enabled.value,
@@ -334,27 +378,17 @@ class _GeorgeSetupDialogState extends State<_GeorgeSetupDialog> {
                 style: const TextStyle(
                     fontSize: 13, fontWeight: FontWeight.w600)),
           if (!enrolled)
-            Row(children: [
-              Expanded(
-                child: SizedBox(
-                  height: 44,
-                  child: TextField(
-                    controller: _codeCtrl,
-                    enabled: !c.busy.value,
-                    textCapitalization: TextCapitalization.characters,
-                    onSubmitted: (_) => _enroll(),
-                    style: const TextStyle(fontSize: 15, letterSpacing: 1),
-                    decoration: InputDecoration(
-                      hintText: 'XXXX-XXXX-XXXX',
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                  ),
-                ),
+            GeorgeInputRow(
+              field: TextField(
+                controller: _codeCtrl,
+                enabled: !c.busy.value,
+                textCapitalization: TextCapitalization.characters,
+                onSubmitted: (_) => _enroll(),
+                style: const TextStyle(fontSize: 15, letterSpacing: 1),
+                decoration:
+                    georgeFieldDecoration(context, hint: 'XXXX-XXXX-XXXX'),
               ),
-              const SizedBox(width: 8),
-              SizedBox(
-                height: 44,
+              button: SizedBox(
                 child: ElevatedButton(
                   onPressed: c.busy.value ? null : _enroll,
                   child: c.busy.value
@@ -365,7 +399,7 @@ class _GeorgeSetupDialogState extends State<_GeorgeSetupDialog> {
                       : Text(translate('george_enroll_button')),
                 ),
               ),
-            ]),
+            ),
           if (_msg.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(_msg,
@@ -516,19 +550,19 @@ Future<bool> _showAutologonDialog(BuildContext context) async {
               const SizedBox(height: 12),
               TextField(
                   controller: userCtrl,
-                  decoration: InputDecoration(
-                      labelText: translate('george_autologon_user'))),
+                  decoration: georgeFieldDecoration(ctx,
+                      label: translate('george_autologon_user'))),
               const SizedBox(height: 8),
               TextField(
                   controller: domainCtrl,
-                  decoration: InputDecoration(
-                      labelText: translate('george_autologon_domain'))),
+                  decoration: georgeFieldDecoration(ctx,
+                      label: translate('george_autologon_domain'))),
               const SizedBox(height: 8),
               TextField(
                   controller: pwCtrl,
                   obscureText: true,
-                  decoration: InputDecoration(
-                      labelText: translate('george_autologon_password'))),
+                  decoration: georgeFieldDecoration(ctx,
+                      label: translate('george_autologon_password'))),
               const SizedBox(height: 8),
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
@@ -680,11 +714,9 @@ class _GeorgeOrgDevicesState extends State<_GeorgeOrgDevices> {
           TextField(
             autofocus: true,
             onChanged: (v) => setState(() => _q = v),
-            decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.search, size: 18),
-              hintText: translate('george_org_search'),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-            ),
+            decoration: georgeFieldDecoration(context,
+                hint: translate('george_org_search'),
+                prefixIcon: const Icon(Icons.search, size: 18)),
           ),
           const SizedBox(height: 10),
           Expanded(

@@ -1,3 +1,6 @@
+import 'package:flutter_hbb/george/george_config.dart'; // GEORGE
+import 'package:flutter_hbb/george/george_deep_link.dart'; // GEORGE
+import 'package:flutter_hbb/george/george_enroll.dart'; // GEORGE
 // main window right pane
 
 import 'dart:async';
@@ -333,6 +336,16 @@ class _ConnectionPageState extends State<ConnectionPage>
       bool isTerminal = false,
       bool isTcpTunneling = false}) {
     var id = _idController.id;
+    // GEORGE: um campo só — ID, código de convite ou código de vínculo.
+    final raw = _idController.text.trim();
+    if (georgeLooksLikeEnrollCode(raw)) {
+      showGeorgeSetupDialog(context, code: raw);
+      return;
+    }
+    if (GeorgeConfig.looksLikeInviteCode(raw)) {
+      georgeConnectWithInvite(raw);
+      return;
+    }
     connect(context, id,
         isFileTransfer: isFileTransfer,
         isViewCamera: isViewCamera,
