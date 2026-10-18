@@ -1103,10 +1103,10 @@ LExit:
 #pragma comment(lib, "Advapi32.lib")
 
 // GEORGE: grava %ProgramData%\George\provision.toml a partir das propriedades do MSI
-// (ENROLLCODE, PERMPASSWORD, UNATTENDED) para o agente do serviço vincular o PC à
-// organização. Ver docs/specs/06-enrollment.md §3.3.
-// CustomActionData = "<UNATTENDED>;<ENROLLCODE>;<PERMPASSWORD>" (a senha é o resto e
-// pode conter ';'). Arquivo com DACL só SYSTEM + Administradores; o agente apaga depois de ler.
+// (ENROLLCODE, PERMPASSWORD, UNATTENDED) para o agente do servico vincular o PC a
+// organizacao. Ver docs/specs/06-enrollment.md 3.3.
+// CustomActionData = "<UNATTENDED>;<ENROLLCODE>;<PERMPASSWORD>" (a senha e o resto e
+// pode conter ';'). Arquivo com DACL so SYSTEM + Administradores; o agente apaga depois de ler.
 static void GeorgeAppendTomlString(std::string& out, const char* key, const std::wstring& value)
 {
     int n = WideCharToMultiByte(CP_UTF8, 0, value.c_str(), (int)value.size(), NULL, 0, NULL, NULL);
@@ -1121,7 +1121,7 @@ static void GeorgeAppendTomlString(std::string& out, const char* key, const std:
             out += '\\';
             out += c;
         } else if (c == '\n' || c == '\r' || c == '\t') {
-            // propriedades do MSI não deveriam ter isso; descarta
+            // propriedades do MSI nao deveriam ter isso; descarta
         } else {
             out += c;
         }
@@ -1148,7 +1148,7 @@ UINT __stdcall WriteGeorgeProvision(__in MSIHANDLE hInstall)
         size_t a = data.find(L';');
         size_t b = (a == std::wstring::npos) ? std::wstring::npos : data.find(L';', a + 1);
         if (b == std::wstring::npos) {
-            WcaLog(LOGMSG_STANDARD, "WriteGeorgeProvision: dados inválidos, nada a fazer");
+            WcaLog(LOGMSG_STANDARD, "WriteGeorgeProvision: dados invalidos, nada a fazer");
             goto LExit;
         }
         std::wstring unattended = data.substr(0, a);
@@ -1174,10 +1174,10 @@ UINT __stdcall WriteGeorgeProvision(__in MSIHANDLE hInstall)
         }
         SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), pSD, FALSE };
         if (!CreateDirectoryW(dir.c_str(), &sa) && GetLastError() != ERROR_ALREADY_EXISTS) {
-            WcaLog(LOGMSG_STANDARD, "WriteGeorgeProvision: não criou %ls (%lu)", dir.c_str(), GetLastError());
+            WcaLog(LOGMSG_STANDARD, "WriteGeorgeProvision: nao criou %ls (%lu)", dir.c_str(), GetLastError());
             goto LExit;
         }
-        // CREATE_ALWAYS ignora o descritor se o arquivo existe → apaga antes.
+        // CREATE_ALWAYS ignora o descritor se o arquivo existe  apaga antes.
         DeleteFileW(path.c_str());
 
         std::string toml;
@@ -1187,14 +1187,14 @@ UINT __stdcall WriteGeorgeProvision(__in MSIHANDLE hInstall)
 
         hFile = CreateFileW(path.c_str(), GENERIC_WRITE, 0, &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
         if (hFile == INVALID_HANDLE_VALUE) {
-            WcaLog(LOGMSG_STANDARD, "WriteGeorgeProvision: não abriu %ls (%lu)", path.c_str(), GetLastError());
+            WcaLog(LOGMSG_STANDARD, "WriteGeorgeProvision: nao abriu %ls (%lu)", path.c_str(), GetLastError());
             goto LExit;
         }
         DWORD written = 0;
         if (!WriteFile(hFile, toml.data(), (DWORD)toml.size(), &written, NULL) || written != toml.size()) {
             WcaLog(LOGMSG_STANDARD, "WriteGeorgeProvision: escrita incompleta (%lu)", GetLastError());
         } else {
-            WcaLog(LOGMSG_STANDARD, "WriteGeorgeProvision: provisionamento gravado (código: %ls, não-assistido: %ls)",
+            WcaLog(LOGMSG_STANDARD, "WriteGeorgeProvision: provisionamento gravado (codigo: %ls, nao-assistido: %ls)",
                 code.empty() ? L"-" : L"sim", unattended.empty() ? L"-" : unattended.c_str());
         }
     }
@@ -1209,6 +1209,6 @@ LExit:
     if (pwzData) {
         ReleaseStr(pwzData);
     }
-    // Nunca derruba a instalação por causa do provisionamento.
+    // Nunca derruba a instalacao por causa do provisionamento.
     return WcaFinalize(ERROR_SUCCESS);
 }
