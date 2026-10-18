@@ -1006,6 +1006,11 @@ async fn handle(data: Data, stream: &mut Connection) {
                     }
                 } else if name == "temporary-password" {
                     password::update_temporary_password();
+                } else if name == crate::george::autologon::IPC_KEY {
+                    // GEORGE: login automático do Windows; nada é persistido no Config.
+                    let ack = crate::george::autologon::apply_from_ipc(&value);
+                    allow_err!(stream.send(&Data::Config((name.clone(), Some(ack)))).await);
+                    return;
                 } else if name == "permanent-password" {
                     if Config::is_disable_change_permanent_password() {
                         log::warn!("Changing permanent password is disabled");

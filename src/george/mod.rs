@@ -12,6 +12,7 @@ use hbb_common::config;
 pub mod lang;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub mod agent;
+pub mod autologon;
 
 /// Orçamento máximo (ms) da tentativa de conexão direta quando há relay disponível.
 /// Sem isso, com NAT ASYMMETRIC dos dois lados o cliente esperava `CONNECT_TIMEOUT`

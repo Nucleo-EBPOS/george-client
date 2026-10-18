@@ -820,6 +820,19 @@ class RustdeskImpl {
     return js.context.callMethod('getByName', ['option', key]);
   }
 
+  // GEORGE: login automático do Windows não existe no navegador.
+  String mainGeorgeAutologonStatus({dynamic hint}) {
+    return 'unsupported';
+  }
+
+  Future<String> mainGeorgeSetAutologon(
+      {required String user,
+      required String domain,
+      required String password,
+      dynamic hint}) {
+    return Future.value('N:unsupported');
+  }
+
   Future<String> mainGetError({dynamic hint}) {
     throw UnimplementedError("mainGetError");
   }

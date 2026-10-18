@@ -1005,6 +1005,16 @@ pub fn main_get_option_sync(key: String) -> SyncReturn<String> {
     SyncReturn(get_option(key))
 }
 
+// GEORGE: login automático do Windows (opção avançada; docs/specs/06-enrollment.md §3.4)
+pub fn main_george_autologon_status() -> SyncReturn<String> {
+    SyncReturn(crate::george::autologon::status())
+}
+
+// GEORGE: pede ao serviço (SYSTEM) para ligar/desligar o login automático. Usuário vazio = desligar.
+pub fn main_george_set_autologon(user: String, domain: String, password: String) -> String {
+    crate::george::autologon::request(user, domain, password)
+}
+
 pub fn main_get_error() -> String {
     get_error()
 }
