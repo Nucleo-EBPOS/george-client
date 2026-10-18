@@ -106,9 +106,11 @@ pub(super) fn verified_update_artifact_from_release_page_url(
 ) -> ResultType<VerifiedUpdateArtifact> {
     let release_id = release_id_from_update_url(update_url)?;
     let display_version = display_version_from_release_id(&release_id)?;
+    // GEORGE: releases do fork (Nucleo-EBPOS/george-client), metadados george-update.json(.sig)
+    let (owner, repo) = crate::george::RELEASE_REPO;
     let expected_artifact_url_prefix =
-        format!("https://github.com/rustdesk/rustdesk/releases/download/{release_id}/");
-    let metadata_url = format!("{expected_artifact_url_prefix}rustdesk-update.json");
+        format!("https://github.com/{owner}/{repo}/releases/download/{release_id}/");
+    let metadata_url = format!("{expected_artifact_url_prefix}george-update.json");
     let signature_url = format!("{metadata_url}.sig");
     let metadata_bytes = fetch_update_sidecar_bytes(&metadata_url)?;
     let signature_bytes = fetch_update_sidecar_bytes(&signature_url)?;

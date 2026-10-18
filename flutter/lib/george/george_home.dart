@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/widgets/login.dart';
+import 'package:flutter_hbb/desktop/widgets/update_progress.dart';
 import 'package:flutter_hbb/george/george_config.dart';
 import 'package:flutter_hbb/george/george_deep_link.dart';
 import 'package:flutter_hbb/george/george_enroll.dart';
@@ -350,9 +351,15 @@ class _GeorgeHomeHeroState extends State<GeorgeHomeHero> {
             SizedBox(
               height: 36,
               child: TextButton.icon(
-                onPressed: () => launchUrlString(url),
+                // Windows/macOS instalados: baixa, confere a assinatura do George e
+                // instala em silêncio (reinicia o app). Senão, abre a página.
+                onPressed: () => ((isWindows || isMacOS) && bind.mainIsInstalled())
+                    ? handleUpdate(url)
+                    : launchUrlString(url),
                 icon: const Icon(Icons.system_update_alt, size: 16),
-                label: Text(translate('george_update_download')),
+                label: Text(translate(((isWindows || isMacOS) && bind.mainIsInstalled())
+                    ? 'george_update_now'
+                    : 'george_update_download')),
               ),
             ),
           ],

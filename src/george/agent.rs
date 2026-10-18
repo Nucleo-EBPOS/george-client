@@ -414,6 +414,8 @@ async fn run() {
             match enroll(&mut st, &code, &pw, &si).await {
                 Ok(()) => {
                     set_status("ok");
+                    // PC da organização: atualizações assinadas aplicadas em segundo plano.
+                    Config::set_option("allow-auto-update".to_owned(), "Y".to_owned());
                     publish_state(&st);
                     next_beat = Instant::now() + Duration::from_secs(FAST_INTERVAL);
                 }

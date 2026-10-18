@@ -20,19 +20,21 @@ use artifact::{validate_artifact, validate_artifact_file_name, ArtifactUrlPolicy
 #[cfg(target_os = "macos")]
 pub(crate) use offline::{verify_offline_update_metadata, OfflineUpdateMetadataRequirements};
 
-const UPDATE_METADATA_SIGNATURE_CONTEXT: &[u8] = b"RustDesk update metadata v1\n";
-const UPDATE_APP: &str = "rustdesk";
-pub(crate) const PUBLIC_UPDATE_PACKAGE_ID: &str = "rustdesk";
+// GEORGE: metadados de atualização assinados com a chave do George (o segredo fica só no CI:
+// GEORGE_UPDATE_SIGNING_KEY). Gerados pelo publish do george-build.yml (george-update.json + .sig).
+const UPDATE_METADATA_SIGNATURE_CONTEXT: &[u8] = b"George update metadata v1\n";
+const UPDATE_APP: &str = "george";
+pub(crate) const PUBLIC_UPDATE_PACKAGE_ID: &str = "george";
 const METADATA_SCHEMA_VERSION: u32 = 1;
 const SIGNATURE_SCHEMA_VERSION: u32 = 1;
 const SIGNATURE_ALGORITHM: &str = "ed25519";
 
 const TRUSTED_UPDATE_KEYS: &[TrustedUpdateKey] = &[TrustedUpdateKey {
-    key_id: "2026-ed25519-main",
+    key_id: "george-2026-ed25519",
     algorithm: SIGNATURE_ALGORITHM,
     public_key: [
-        118, 252, 116, 215, 49, 217, 220, 109, 145, 119, 210, 101, 225, 198, 63, 2, 41, 127, 197,
-        127, 52, 251, 6, 204, 125, 117, 96, 204, 187, 166, 85, 59,
+        53, 250, 116, 66, 130, 166, 101, 123, 131, 175, 68, 110, 213, 144, 4, 157, 41, 32, 176,
+        248, 89, 22, 245, 17, 234, 201, 247, 167, 21, 93, 227, 81,
     ],
 }];
 
