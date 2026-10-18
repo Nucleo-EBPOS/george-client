@@ -81,7 +81,7 @@ pub fn request(_user: String, _domain: String, _password: String) -> String {
 async fn request_async(value: String) -> hbb_common::ResultType<String> {
     use crate::ipc::Data;
     let mut c = crate::ipc::connect(1_000, "").await?;
-    c.send_config(IPC_KEY, value).await?;
+    c.send(&Data::Config((IPC_KEY.to_owned(), Some(value)))).await?;
     if let Some(Data::Config((name, Some(v)))) = c.next_timeout(5_000).await? {
         if name == IPC_KEY {
             return Ok(v);
