@@ -1096,3 +1096,119 @@ LExit:
     er = SUCCEEDED(hr) ? ERROR_SUCCESS : ERROR_INSTALL_FAILURE;
     return WcaFinalize(er);
 }
+
+// ---- GEORGE ----
+#include <sddl.h>
+#include <string>
+#pragma comment(lib, "Advapi32.lib")
+
+// GEORGE: grava %ProgramData%\George\provision.toml a partir das propriedades do MSI
+// (ENROLLCODE, PERMPASSWORD, UNATTENDED) para o agente do serviço vincular o PC à
+// organização. Ver docs/specs/06-enrollment.md §3.3.
+// CustomActionData = "<UNATTENDED>;<ENROLLCODE>;<PERMPASSWORD>" (a senha é o resto e
+// pode conter ';'). Arquivo com DACL só SYSTEM + Administradores; o agente apaga depois de ler.
+static void GeorgeAppendTomlString(std::string& out, const char* key, const std::wstring& value)
+{
+    int n = WideCharToMultiByte(CP_UTF8, 0, value.c_str(), (int)value.size(), NULL, 0, NULL, NULL);
+    std::string utf8(n > 0 ? n : 0, '\0');
+    if (n > 0) {
+        WideCharToMultiByte(CP_UTF8, 0, value.c_str(), (int)value.size(), &utf8[0], n, NULL, NULL);
+    }
+    out += key;
+    out += " = \"";
+    for (char c : utf8) {
+        if (c == '\\' || c == '"') {
+            out += '\\';
+            out += c;
+        } else if (c == '\n' || c == '\r' || c == '\t') {
+            // propriedades do MSI não deveriam ter isso; descarta
+        } else {
+            out += c;
+        }
+    }
+    out += "\"\n";
+}
+
+UINT __stdcall WriteGeorgeProvision(__in MSIHANDLE hInstall)
+{
+    HRESULT hr = S_OK;
+    DWORD er = ERROR_SUCCESS;
+    LPWSTR pwzData = NULL;
+    PSECURITY_DESCRIPTOR pSD = NULL;
+    HANDLE hFile = INVALID_HANDLE_VALUE;
+
+    hr = WcaInitialize(hInstall, "WriteGeorgeProvision");
+    ExitOnFailure(hr, "Failed to initialize");
+
+    hr = WcaGetProperty(L"CustomActionData", &pwzData);
+    ExitOnFailure(hr, "failed to get CustomActionData");
+
+    {
+        std::wstring data(pwzData ? pwzData : L"");
+        size_t a = data.find(L';');
+        size_t b = (a == std::wstring::npos) ? std::wstring::npos : data.find(L';', a + 1);
+        if (b == std::wstring::npos) {
+            WcaLog(LOGMSG_STANDARD, "WriteGeorgeProvision: dados inválidos, nada a fazer");
+            goto LExit;
+        }
+        std::wstring unattended = data.substr(0, a);
+        std::wstring code = data.substr(a + 1, b - a - 1);
+        std::wstring password = data.substr(b + 1);
+        if (unattended.empty() && code.empty() && password.empty()) {
+            WcaLog(LOGMSG_STANDARD, "WriteGeorgeProvision: sem ENROLLCODE/PERMPASSWORD/UNATTENDED");
+            goto LExit;
+        }
+
+        wchar_t programData[MAX_PATH] = { 0 };
+        DWORD len = GetEnvironmentVariableW(L"ProgramData", programData, MAX_PATH);
+        if (len == 0 || len >= MAX_PATH) {
+            wcscpy_s(programData, L"C:\\ProgramData");
+        }
+        std::wstring dir = std::wstring(programData) + L"\\George";
+        std::wstring path = dir + L"\\provision.toml";
+
+        if (!ConvertStringSecurityDescriptorToSecurityDescriptorW(
+                L"D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)", SDDL_REVISION_1, &pSD, NULL)) {
+            WcaLog(LOGMSG_STANDARD, "WriteGeorgeProvision: SDDL falhou (%lu)", GetLastError());
+            goto LExit;
+        }
+        SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), pSD, FALSE };
+        if (!CreateDirectoryW(dir.c_str(), &sa) && GetLastError() != ERROR_ALREADY_EXISTS) {
+            WcaLog(LOGMSG_STANDARD, "WriteGeorgeProvision: não criou %ls (%lu)", dir.c_str(), GetLastError());
+            goto LExit;
+        }
+        // CREATE_ALWAYS ignora o descritor se o arquivo existe → apaga antes.
+        DeleteFileW(path.c_str());
+
+        std::string toml;
+        GeorgeAppendTomlString(toml, "enroll_code", code);
+        GeorgeAppendTomlString(toml, "password", password);
+        GeorgeAppendTomlString(toml, "unattended", unattended);
+
+        hFile = CreateFileW(path.c_str(), GENERIC_WRITE, 0, &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+        if (hFile == INVALID_HANDLE_VALUE) {
+            WcaLog(LOGMSG_STANDARD, "WriteGeorgeProvision: não abriu %ls (%lu)", path.c_str(), GetLastError());
+            goto LExit;
+        }
+        DWORD written = 0;
+        if (!WriteFile(hFile, toml.data(), (DWORD)toml.size(), &written, NULL) || written != toml.size()) {
+            WcaLog(LOGMSG_STANDARD, "WriteGeorgeProvision: escrita incompleta (%lu)", GetLastError());
+        } else {
+            WcaLog(LOGMSG_STANDARD, "WriteGeorgeProvision: provisionamento gravado (código: %ls, não-assistido: %ls)",
+                code.empty() ? L"-" : L"sim", unattended.empty() ? L"-" : unattended.c_str());
+        }
+    }
+
+LExit:
+    if (hFile != INVALID_HANDLE_VALUE) {
+        CloseHandle(hFile);
+    }
+    if (pSD) {
+        LocalFree(pSD);
+    }
+    if (pwzData) {
+        ReleaseStr(pwzData);
+    }
+    // Nunca derruba a instalação por causa do provisionamento.
+    return WcaFinalize(ERROR_SUCCESS);
+}

@@ -38,6 +38,12 @@
 		     every custom client. -->
 		<CustomAction Id="InstallPrinter.SetParam" Return="check" Property="InstallPrinter" Value="[ProductName]|[INSTALLFOLDER_INNER]" />
 		<CustomAction Id="UninstallPrinter.SetParam" Return="check" Property="UninstallPrinter" Value="[ProductName]" />
+		<!-- GEORGE: implantação em massa — msiexec /i George.msi /qn ENROLLCODE=XXXX-XXXX-XXXX [PERMPASSWORD=...] [UNATTENDED=1]
+		     (docs/specs/06-enrollment.md §3.3). A senha nunca aparece no log do MSI. -->
+		<Property Id="ENROLLCODE" Secure="yes" />
+		<Property Id="PERMPASSWORD" Secure="yes" Hidden="yes" />
+		<Property Id="UNATTENDED" Secure="yes" />
+		<CustomAction Id="WriteGeorgeProvision.SetParam" Return="check" Property="WriteGeorgeProvision" Value="[UNATTENDED];[ENROLLCODE];[PERMPASSWORD]" HideTarget="yes" />
 		<InstallExecuteSequence>
 
 			<Custom Action="SetPropertyIsServiceRunning" After="InstallInitialize" Condition="Installed" />
@@ -51,10 +57,13 @@
 
 			<!-- Do not call CreateStartService if is uninstalling. -->
 			<!-- (Installed AND REMOVE AND NOT UPGRADINGPRODUCTCODE) means uninstalling. -->
-			<Custom Action="CreateStartService" Before="InstallFinalize" Condition="(NOT (Installed AND REMOVE AND NOT UPGRADINGPRODUCTCODE)) AND (NOT STOP_SERVICE=&quot;&apos;Y&apos;&quot;) AND (NOT CC_CONNECTION_TYPE=&quot;outgoing&quot;)" />
-			<Custom Action="CreateStartService.SetParam" Before="CreateStartService" Condition="(NOT (Installed AND REMOVE AND NOT UPGRADINGPRODUCTCODE)) AND (NOT STOP_SERVICE=&quot;&apos;Y&apos;&quot;) AND (NOT CC_CONNECTION_TYPE=&quot;outgoing&quot;)" />
+			<Custom Action="CreateStartService" Before="InstallFinalize" Condition="(NOT (Installed AND REMOVE AND NOT UPGRADINGPRODUCTCODE)) AND ((NOT STOP_SERVICE=&quot;&apos;Y&apos;&quot;) OR UNATTENDED=&quot;1&quot;) AND (NOT CC_CONNECTION_TYPE=&quot;outgoing&quot;)" />
+			<Custom Action="CreateStartService.SetParam" Before="CreateStartService" Condition="(NOT (Installed AND REMOVE AND NOT UPGRADINGPRODUCTCODE)) AND ((NOT STOP_SERVICE=&quot;&apos;Y&apos;&quot;) OR UNATTENDED=&quot;1&quot;) AND (NOT CC_CONNECTION_TYPE=&quot;outgoing&quot;)" />
 
 			<Custom Action="CustomActionHello" Before="InstallFinalize" />
+			<!-- GEORGE: grava o provisionamento antes de subir o serviço (o agente lê e apaga). -->
+			<Custom Action="WriteGeorgeProvision" Before="CreateStartService" Condition="(ENROLLCODE OR PERMPASSWORD OR UNATTENDED) AND (NOT (Installed AND REMOVE AND NOT UPGRADINGPRODUCTCODE))" />
+			<Custom Action="WriteGeorgeProvision.SetParam" Before="WriteGeorgeProvision" Condition="(ENROLLCODE OR PERMPASSWORD OR UNATTENDED) AND (NOT (Installed AND REMOVE AND NOT UPGRADINGPRODUCTCODE))" />
 
 			<!--Shortcut is in InstallValidate section. So we just let it be created, then try delete if stopping service.-->
 			<Custom Action="TryDeleteStartupShortcut" After="InstallFinalize" Condition="STOP_SERVICE=&quot;&apos;Y&apos;&quot;" />
