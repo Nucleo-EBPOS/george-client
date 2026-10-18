@@ -1426,6 +1426,14 @@ impl Client {
         // awaits below, the relay override, or a secure_connection failure — closes its pc via the
         // guard's drop. Disarmed only once WebRTC is the confirmed winning, secured transport.
         let mut webrtc_guard = webrtc_offerer.map(OffererGuard::new);
+        // GEORGE: hbbs que não informa relay → usa o relay embutido em vez de falhar.
+        let george_relay;
+        let relay_server: &str = if relay_server.is_empty() && !is_local {
+            george_relay = crate::george::fallback_relay();
+            &george_relay
+        } else {
+            relay_server
+        };
         let direct_failures = interface.get_lch().read().unwrap().direct_failures;
         let mut connect_timeout = 0;
         const MIN: u64 = 1000;
@@ -1457,6 +1465,11 @@ impl Client {
             if connect_timeout < MIN {
                 connect_timeout = MIN;
             }
+        }
+        // GEORGE: com relay disponível, a conexão direta tem orçamento curto; o relay
+        // entra em < 1 s em vez de esperar até 18 s (docs/specs/06 §3.6).
+        if !is_local && !relay_server.is_empty() {
+            connect_timeout = connect_timeout.min(crate::george::DIRECT_BUDGET_MS);
         }
         log::info!("peer address: {}, timeout: {}", peer, connect_timeout);
         let start = std::time::Instant::now();

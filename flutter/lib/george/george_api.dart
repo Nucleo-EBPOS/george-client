@@ -73,6 +73,44 @@ class GeorgeInviteTarget {
   }
 }
 
+/// Dispositivo da organização (aba do técnico). Ver docs/specs/06-enrollment.md.
+class GeorgeOrgDevice {
+  GeorgeOrgDevice(
+      {required this.id,
+      required this.rustdeskId,
+      required this.name,
+      this.group = '',
+      this.os = '',
+      this.online = false});
+  final int id;
+  final String rustdeskId;
+  final String name;
+  final String group;
+  final String os;
+  final bool online;
+
+  static GeorgeOrgDevice fromJson(Map<String, dynamic> j) {
+    final alias = (j['alias'] ?? '').toString();
+    final rawId = j['id'];
+    return GeorgeOrgDevice(
+      id: rawId is int ? rawId : int.tryParse('$rawId') ?? 0,
+      rustdeskId: (j['rustdesk_id'] ?? '').toString(),
+      name: alias.isNotEmpty
+          ? alias
+          : (j['name'] ?? j['hostname'] ?? j['rustdesk_id'] ?? '').toString(),
+      group: (j['group_name'] ?? '').toString(),
+      os: (j['os'] ?? j['platform'] ?? '').toString(),
+      online: j['online'] == true,
+    );
+  }
+}
+
+class GeorgeCredentials {
+  GeorgeCredentials({required this.id, this.password});
+  final String id;
+  final String? password;
+}
+
 class GeorgeApi {
   GeorgeApi._();
 
@@ -207,6 +245,30 @@ class GeorgeApi {
     if (!isLoggedIn) return;
     final id = Uri.encodeComponent(await bind.mainGetMyId());
     await _patch('/devices/$id', {'host_enabled': enabled});
+  }
+
+  // ---- organização (técnico) ----
+
+  /// GET /devices?enrolled=true — PCs vinculados à organização.
+  static Future<List<GeorgeOrgDevice>> orgDevices() async {
+    final j = await _get('/devices?enrolled=true&per_page=500');
+    final data = j['data'];
+    final List list = data is List
+        ? data
+        : (data is Map && data['items'] is List ? data['items'] as List : []);
+    return list
+        .whereType<Map>()
+        .map((m) => GeorgeOrgDevice.fromJson(Map<String, dynamic>.from(m)))
+        .toList();
+  }
+
+  /// GET /devices/{id}/credentials — ID + senha permanente (auditado na API).
+  static Future<GeorgeCredentials> deviceCredentials(int id) async {
+    final j = await _get('/devices/$id/credentials');
+    final d = j['data'] is Map ? Map<String, dynamic>.from(j['data']) : j;
+    return GeorgeCredentials(
+        id: (d['rustdesk_id'] ?? '').toString(),
+        password: d['password']?.toString());
   }
 
   static void logError(String where, Object e) {

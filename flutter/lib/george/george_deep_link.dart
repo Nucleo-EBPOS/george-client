@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/george/george_api.dart';
 import 'package:flutter_hbb/george/george_config.dart';
+import 'package:flutter_hbb/george/george_enroll.dart';
 import 'package:get/get.dart';
 
 /// Hook chamado no início de `handleUriLink` (common.dart).
@@ -20,6 +21,18 @@ bool georgeTryHandleUriLink(
   if (u == null) return false;
   if (u.scheme.toLowerCase() != GeorgeConfig.deepLinkScheme) return false;
   final action = (u.host.isNotEmpty ? u.host : u.path).replaceAll('/', '');
+  // george://enroll/XXXX-XXXX-XXXX  ou  george://enroll?code=… → configurar este PC
+  if (u.host.toLowerCase() == 'enroll' ||
+      (u.host.isEmpty && u.pathSegments.isNotEmpty &&
+          u.pathSegments.first.toLowerCase() == 'enroll')) {
+    final segs = u.pathSegments.where((s) => s.isNotEmpty).toList();
+    final fromPath = u.host.isEmpty
+        ? (segs.length > 1 ? segs[1] : '')
+        : (segs.isNotEmpty ? segs.first : '');
+    final code = u.queryParameters['code'] ?? fromPath;
+    _openSetupWhenReady(code);
+    return true;
+  }
   if (action.toLowerCase() != 'connect') return false;
   final q = u.queryParameters.map((k, v) => MapEntry(k.toLowerCase(), v));
   final code = q['code'];
@@ -94,4 +107,13 @@ Future<void> _connectWhenReady(String id, String? password,
   final ctx = Get.context;
   if (ctx == null) return;
   await connect(ctx, id, password: password, forceRelay: forceRelay);
+}
+
+Future<void> _openSetupWhenReady(String code) async {
+  for (var i = 0; i < 50 && Get.context == null; i++) {
+    await Future.delayed(const Duration(milliseconds: 100));
+  }
+  final ctx = Get.context;
+  if (ctx == null) return;
+  await showGeorgeSetupDialog(ctx, code: code.trim().isEmpty ? null : code);
 }

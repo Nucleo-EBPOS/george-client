@@ -10,6 +10,24 @@
 use hbb_common::config;
 
 pub mod lang;
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+pub mod agent;
+pub mod autologon;
+
+/// Orçamento máximo (ms) da tentativa de conexão direta quando há relay disponível.
+/// Sem isso, com NAT ASYMMETRIC dos dois lados o cliente esperava `CONNECT_TIMEOUT`
+/// (18 s) antes de cair para o relay no 1º acesso a um PC (docs/specs/06 §3.6).
+pub const DIRECT_BUDGET_MS: u64 = 2_500;
+
+/// Relay a usar quando o hbbs não informar um (antes: falhava com
+/// "Failed to make direct connection to remote desktop").
+pub fn fallback_relay() -> String {
+    if dev_server_unlocked() {
+        config::Config::get_option("relay-server")
+    } else {
+        RELAY_SERVER.to_owned()
+    }
+}
 
 pub const APP_NAME: &str = "George";
 pub const ORG: &str = "com.georgedesk";

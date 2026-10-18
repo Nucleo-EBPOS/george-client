@@ -19,5 +19,7 @@
 		<CustomAction Id="RemoveAmyuniIdd" DllEntry="RemoveAmyuniIdd" Impersonate="no" Execute="deferred" Return="ignore" BinaryRef="Custom_Actions_Dll"/>
 		<CustomAction Id="InstallPrinter" DllEntry="InstallPrinter" Impersonate="no" Execute="deferred" Return="ignore" BinaryRef="Custom_Actions_Dll"/>
 		<CustomAction Id="UninstallPrinter" DllEntry="UninstallPrinter" Impersonate="no" Execute="deferred" Return="ignore" BinaryRef="Custom_Actions_Dll"/>
+		<!-- GEORGE: provisionamento (ENROLLCODE/PERMPASSWORD/UNATTENDED) → %ProgramData%\George\provision.toml -->
+		<CustomAction Id="WriteGeorgeProvision" DllEntry="WriteGeorgeProvision" Impersonate="no" Execute="deferred" Return="ignore" HideTarget="yes" BinaryRef="Custom_Actions_Dll"/>
 	</Fragment>
 </Wix>

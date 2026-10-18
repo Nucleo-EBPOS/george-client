@@ -421,6 +421,9 @@ pub fn core_main() -> Option<CoreMainAction> {
                 import_config(&filepath);
             }
             return None;
+        } else if args[0] == "--enroll" || args[0] == "--unattended" {
+            // GEORGE: George --enroll <CÓDIGO> [--password <SENHA>] [--unattended on|off]
+            std::process::exit(crate::george::agent::cli(&args));
         } else if args[0] == "--password" {
             if is_cli_setting_change_disabled() {
                 println!("Settings are disabled!");

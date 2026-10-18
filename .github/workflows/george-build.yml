@@ -60,7 +60,9 @@ env:
   GEORGE_APP_NAME: "George"
   # Versão do produto (tag vX.Y.Z); fora de release fica "ci" → checador usa 0.0.0.
   GEORGE_VERSION: "${{ inputs.upload-tag }}"
-  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+  # GEORGE: o provedor x-gha do vcpkg foi desativado pelo GitHub (recompilava tudo a cada build,
+  # ~11 min no Windows). Agora o diretório `installed` vai no actions/cache (passo "Cache vcpkg").
+  VCPKG_BINARY_SOURCES: "clear"
   # vcpkg version: 2026.07.29
   # If we change the `VCPKG COMMIT_ID`, please remember:
   # 1. Call `$VCPKG_ROOT/vcpkg x-update-baseline` to update the baseline in `vcpkg.json`.
@@ -238,6 +240,12 @@ jobs:
           vcpkgDirectory: C:\vcpkg
           vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
           doNotCache: false
+
+      - name: Cache vcpkg (GEORGE)
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_ROOT }}/installed
+          key: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.job.vcpkg-triplet }}-${{ env.VCPKG_COMMIT_ID }}-${{ hashFiles('vcpkg.json') }}
 
       - name: Install vcpkg dependencies
         env:
@@ -543,6 +551,12 @@ jobs:
           vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
           doNotCache: false
 
+      - name: Cache vcpkg (GEORGE)
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_ROOT }}/installed
+          key: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.job.vcpkg-triplet }}-${{ env.VCPKG_COMMIT_ID }}-${{ hashFiles('vcpkg.json') }}
+
       - name: Install vcpkg dependencies
         run: |
           if ! $VCPKG_ROOT/vcpkg \
@@ -734,6 +748,13 @@ jobs:
           vcpkgDirectory: /opt/artifacts/vcpkg
           vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
           doNotCache: false
+
+      - name: Cache vcpkg (GEORGE)
+        if: matrix.job.arch == 'x86_64' || env.UPLOAD_ARTIFACT == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_ROOT }}/installed
+          key: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.job.vcpkg-triplet }}-${{ env.VCPKG_COMMIT_ID }}-${{ hashFiles('vcpkg.json') }}
 
       - name: Install vcpkg dependencies
         if: matrix.job.arch == 'x86_64' || env.UPLOAD_ARTIFACT == 'true'
@@ -1067,6 +1088,47 @@ jobs:
           sha256sum George-* > SHA256SUMS.txt
           cat George-manifest.json
           test -n "$(ls George-* 2>/dev/null)"
+      - name: Signed update metadata (GEORGE)
+        # Metadados que o atualizador do app (src/update_metadata.rs) exige: lista de instaladores com
+        # SHA256, assinada em Ed25519 com GEORGE_UPDATE_SIGNING_KEY (seed base64 de 32 bytes).
+        shell: bash
+        env:
+          GEORGE_UPDATE_SIGNING_KEY: ${{ secrets.GEORGE_UPDATE_SIGNING_KEY }}
+        run: |
+          test -n "$GEORGE_UPDATE_SIGNING_KEY" || { echo "::error::secret GEORGE_UPDATE_SIGNING_KEY ausente"; exit 1; }
+          python3 -m pip install --quiet "cryptography>=42"
+          cd release
+          python3 - <<'EOF2'
+          import base64, datetime, hashlib, json, os
+          from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+          tag = os.environ['TAG_NAME']; ver = tag[1:] if tag.startswith('v') else tag
+          repo = os.environ['GITHUB_REPOSITORY']
+          prefix = f'https://github.com/{repo}/releases/download/{tag}/'
+          wanted = [('George-windows-x86_64.exe', 'windows', 'x86_64', 'exe'),
+                    ('George-windows-x86_64.msi', 'windows', 'x86_64', 'msi'),
+                    ('George-macos-aarch64.dmg', 'macos', 'aarch64', 'dmg'),
+                    ('George-macos-x86_64.dmg', 'macos', 'x86_64', 'dmg')]
+          arts = []
+          for name, plat, arch, fmt in wanted:
+              if not os.path.exists(name):
+                  print(f'::warning::sem {name} no metadado de atualização'); continue
+              data = open(name, 'rb').read()
+              arts.append({'platform': plat, 'arch': arch, 'format': fmt, 'url': prefix + name,
+                           'file_name': name, 'size': len(data), 'sha256': hashlib.sha256(data).hexdigest()})
+          key_id = 'george-2026-ed25519'
+          meta = {'schema_version': 1, 'app': 'george', 'package_id': 'george', 'version': ver,
+                  'release_id': tag, 'published_at': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+                  'signature_key_id': key_id, 'artifacts': arts}
+          body = json.dumps(meta, indent=2).encode()
+          open('george-update.json', 'wb').write(body)
+          sk = Ed25519PrivateKey.from_private_bytes(base64.b64decode(os.environ['GEORGE_UPDATE_SIGNING_KEY']))
+          sig = sk.sign(b'George update metadata v1\n' + body)
+          sk.public_key().verify(sig, b'George update metadata v1\n' + body)
+          json.dump({'schema_version': 1, 'algorithm': 'ed25519', 'key_id': key_id,
+                     'signature': base64.b64encode(sig).decode()}, open('george-update.json.sig', 'w'))
+          print(body.decode())
+          EOF2
+
       - name: Publish release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
@@ -1076,3 +1138,5 @@ jobs:
           files: |
             release/George-*
             release/SHA256SUMS.txt
+            release/george-update.json
+            release/george-update.json.sig
