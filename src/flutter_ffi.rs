@@ -1005,6 +1005,11 @@ pub fn main_get_option_sync(key: String) -> SyncReturn<String> {
     SyncReturn(get_option(key))
 }
 
+// GEORGE: login automático (Windows/macOS/Linux) — JSON {supported, needs_password, user, domain, status, note}
+pub fn main_george_autologon_info() -> SyncReturn<String> {
+    SyncReturn(crate::george::autologon::info())
+}
+
 // GEORGE: login automático do Windows (opção avançada; docs/specs/06-enrollment.md §3.4)
 pub fn main_george_autologon_status() -> SyncReturn<String> {
     SyncReturn(crate::george::autologon::status())
