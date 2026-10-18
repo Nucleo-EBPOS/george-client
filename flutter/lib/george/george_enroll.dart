@@ -1,10 +1,11 @@
 // GEORGE: "Este computador" — acesso não-assistido, vínculo à organização
-// (enrollment) e login automático do Windows (avançado, desligado por padrão).
+// (enrollment) e login automático do sistema (Windows/macOS/Linux, desligado por padrão).
 // Para o técnico logado: "Dispositivos da organização" com conexão em 1 clique.
 // O vínculo em si roda no serviço (src/george/agent.rs); aqui a UI só entrega
 // o código e lê o estado publicado em options (sem segredos).
 // Contrato: docs/specs/06-enrollment.md (monorepo george).
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -249,7 +250,7 @@ class _GeorgeSetupDialogState extends State<_GeorgeSetupDialog> {
   final _codeCtrl = TextEditingController();
   String _msg = '';
   bool _msgError = false;
-  String _autologon = 'off';
+  Map<String, dynamic> _al = const {};
 
   @override
   void initState() {
@@ -259,7 +260,7 @@ class _GeorgeSetupDialogState extends State<_GeorgeSetupDialog> {
     }
     GeorgeHostController.to;
     GeorgeEnrollController.to.refresh();
-    if (isWindows) _autologon = bind.mainGeorgeAutologonStatus();
+    _loadAutologon();
     if (widget.initialCode != null &&
         georgeLooksLikeEnrollCode(widget.initialCode!)) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _enroll());
@@ -270,6 +271,16 @@ class _GeorgeSetupDialogState extends State<_GeorgeSetupDialog> {
   void dispose() {
     _codeCtrl.dispose();
     super.dispose();
+  }
+
+  void _loadAutologon() {
+    if (!isDesktop) return;
+    try {
+      _al = Map<String, dynamic>.from(
+          jsonDecode(bind.mainGeorgeAutologonInfo()) as Map);
+    } catch (_) {
+      _al = const {};
+    }
   }
 
   Future<void> _enroll() async {
@@ -422,45 +433,46 @@ class _GeorgeSetupDialogState extends State<_GeorgeSetupDialog> {
     });
   }
 
-  Widget _advanced(BuildContext context) {
-    if (!isWindows) return const SizedBox.shrink();
-    final on = _autologon.startsWith('on');
-    return Theme(
-      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-      child: ExpansionTile(
-        tilePadding: EdgeInsets.zero,
-        title: Text(translate('george_advanced'),
-            style: TextStyle(
-                fontSize: 13, color: GeorgeTheme.mutedForeground(context))),
-        children: [
-          _section(
-            context,
-            icon: Icons.login,
-            title: translate('george_autologon_title'),
-            desc: on
-                ? '${translate('george_autologon_on')} ${_autologon.substring(3)}'
-                : translate('george_autologon_desc'),
-            trailing: Switch(
-              value: on,
-              onChanged: (v) async {
+  /// "Entrar automaticamente ao ligar" (Windows/macOS/Linux). Desligado por padrão.
+  Widget _autologonSection(BuildContext context) {
+    if (!isDesktop || _al.isEmpty) return const SizedBox.shrink();
+    final status = (_al['status'] ?? 'off').toString();
+    final on = status.startsWith('on:');
+    final supported = _al['supported'] == true;
+    final note = (_al['note'] ?? '').toString();
+    String desc;
+    if (on) {
+      desc = '${translate('george_autologon_on')} ${status.substring(3)}';
+    } else if (!supported) {
+      desc = translate(note == 'filevault'
+          ? 'george_autologon_filevault'
+          : 'george_autologon_unsupported');
+    } else {
+      desc = translate('george_autologon_desc');
+    }
+    return _section(
+      context,
+      icon: Icons.login,
+      title: translate('george_autologon_title'),
+      desc: desc,
+      trailing: Switch(
+        value: on,
+        onChanged: (!supported && !on)
+            ? null
+            : (v) async {
                 if (v) {
-                  final ok = await _showAutologonDialog(context);
+                  final ok = await _showAutologonDialog(context, _al);
                   if (!ok) return;
                 } else {
                   final r = await bind.mainGeorgeSetAutologon(
                       user: '', domain: '', password: '');
                   if (r != 'Y') {
-                    showToast('${translate('george_autologon_failed')} $r');
+                    showToast(
+                        '${translate('george_autologon_failed')} ${r.replaceFirst('N:', '')}');
                   }
                 }
-                if (mounted) {
-                  setState(
-                      () => _autologon = bind.mainGeorgeAutologonStatus());
-                }
+                if (mounted) setState(_loadAutologon);
               },
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -485,7 +497,8 @@ class _GeorgeSetupDialogState extends State<_GeorgeSetupDialog> {
               const SizedBox(height: 10),
               _enrollSection(context),
               const SizedBox(height: 4),
-              _advanced(context),
+              const SizedBox(height: 10),
+              _autologonSection(context),
             ],
           ),
         ),
@@ -500,20 +513,30 @@ class _GeorgeSetupDialogState extends State<_GeorgeSetupDialog> {
   }
 }
 
-/// Pede usuário/senha do Windows para o login automático, com aviso de risco.
-Future<bool> _showAutologonDialog(BuildContext context) async {
-  final userCtrl = TextEditingController();
-  final domainCtrl = TextEditingController();
+/// Login automático: usuário já preenchido com o da sessão atual; pede a senha só onde o
+/// sistema precisa (Windows/macOS). No Windows a credencial é validada antes de salvar.
+Future<bool> _showAutologonDialog(
+    BuildContext context, Map<String, dynamic> info) async {
+  final userCtrl = TextEditingController(text: (info['user'] ?? '').toString());
+  final domainCtrl =
+      TextEditingController(text: (info['domain'] ?? '').toString());
   final pwCtrl = TextEditingController();
-  var accepted = false;
+  final needsPw = info['needs_password'] != false;
   var error = '';
   var working = false;
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => StatefulBuilder(builder: (ctx, setState) {
       Future<void> submit() async {
-        if (!accepted || userCtrl.text.trim().isEmpty) return;
-        setState(() => working = true);
+        if (userCtrl.text.trim().isEmpty ||
+            (needsPw && pwCtrl.text.isEmpty) ||
+            working) {
+          return;
+        }
+        setState(() {
+          working = true;
+          error = '';
+        });
         final r = await bind.mainGeorgeSetAutologon(
             user: userCtrl.text.trim(),
             domain: domainCtrl.text.trim(),
@@ -523,7 +546,9 @@ Future<bool> _showAutologonDialog(BuildContext context) async {
         } else {
           setState(() {
             working = false;
-            error = '${translate('george_autologon_failed')} $r';
+            error = r == 'N:cancelado'
+                ? ''
+                : '${translate('george_autologon_failed')} ${r.replaceFirst('N:', '')}';
           });
         }
       }
@@ -536,55 +561,66 @@ Future<bool> _showAutologonDialog(BuildContext context) async {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: GeorgeTheme.destructive(ctx).withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(GeorgeTokens.radiusSm),
-                  border: Border.all(
-                      color: GeorgeTheme.destructive(ctx).withOpacity(0.4)),
-                ),
-                child: Text(translate('george_autologon_risk'),
-                    style: const TextStyle(fontSize: 12, height: 1.4)),
-              ),
-              const SizedBox(height: 12),
+              Text(translate('george_autologon_explain'),
+                  style: TextStyle(
+                      fontSize: 13,
+                      height: 1.4,
+                      color: GeorgeTheme.mutedForeground(ctx))),
+              const SizedBox(height: 14),
               TextField(
                   controller: userCtrl,
                   decoration: georgeFieldDecoration(ctx,
                       label: translate('george_autologon_user'))),
-              const SizedBox(height: 8),
-              TextField(
-                  controller: domainCtrl,
-                  decoration: georgeFieldDecoration(ctx,
-                      label: translate('george_autologon_domain'))),
-              const SizedBox(height: 8),
-              TextField(
-                  controller: pwCtrl,
-                  obscureText: true,
-                  decoration: georgeFieldDecoration(ctx,
-                      label: translate('george_autologon_password'))),
-              const SizedBox(height: 8),
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                value: accepted,
-                onChanged: (v) => setState(() => accepted = v == true),
-                title: Text(translate('george_autologon_accept'),
-                    style: const TextStyle(fontSize: 12)),
-              ),
-              if (error.isNotEmpty)
+              if (isWindows) ...[
+                const SizedBox(height: 10),
+                TextField(
+                    controller: domainCtrl,
+                    decoration: georgeFieldDecoration(ctx,
+                        label: translate('george_autologon_domain'))),
+              ],
+              if (needsPw) ...[
+                const SizedBox(height: 10),
+                TextField(
+                    controller: pwCtrl,
+                    obscureText: true,
+                    autofocus: true,
+                    onSubmitted: (_) => submit(),
+                    decoration: georgeFieldDecoration(ctx,
+                        label: translate('george_autologon_password'))),
+              ],
+              const SizedBox(height: 10),
+              Row(children: [
+                Icon(Icons.info_outline,
+                    size: 14, color: GeorgeTheme.mutedForeground(ctx)),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(translate('george_autologon_risk_short'),
+                      style: TextStyle(
+                          fontSize: 11.5,
+                          color: GeorgeTheme.mutedForeground(ctx))),
+                ),
+              ]),
+              if (error.isNotEmpty) ...[
+                const SizedBox(height: 8),
                 Text(error,
                     style: TextStyle(
                         fontSize: 12, color: GeorgeTheme.destructive(ctx))),
+              ],
             ],
           ),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
+              onPressed: working ? null : () => Navigator.of(ctx).pop(false),
               child: Text(translate('Cancel'))),
           ElevatedButton(
-              onPressed: (accepted && !working) ? submit : null,
-              child: Text(translate('george_autologon_enable'))),
+              onPressed: working ? null : submit,
+              child: working
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : Text(translate('george_autologon_enable'))),
         ],
       );
     }),

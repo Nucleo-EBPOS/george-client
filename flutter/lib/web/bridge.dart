@@ -821,6 +821,10 @@ class RustdeskImpl {
   }
 
   // GEORGE: login automático do Windows não existe no navegador.
+  String mainGeorgeAutologonInfo({dynamic hint}) {
+    return '{"supported":false}';
+  }
+
   String mainGeorgeAutologonStatus({dynamic hint}) {
     return 'unsupported';
   }

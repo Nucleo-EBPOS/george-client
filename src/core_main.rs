@@ -421,6 +421,11 @@ pub fn core_main() -> Option<CoreMainAction> {
                 import_config(&filepath);
             }
             return None;
+        } else if args[0] == crate::george::autologon::APPLY_ARG {
+            // GEORGE: processo elevado (macOS/Linux) que aplica o login automático
+            std::process::exit(crate::george::autologon::apply_file_cli(
+                args.get(1).map(|s| s.as_str()).unwrap_or(""),
+            ));
         } else if args[0] == "--enroll" || args[0] == "--unattended" {
             // GEORGE: George --enroll <CÓDIGO> [--password <SENHA>] [--unattended on|off]
             std::process::exit(crate::george::agent::cli(&args));
