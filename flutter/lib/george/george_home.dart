@@ -7,9 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/widgets/login.dart';
-import 'package:flutter_hbb/desktop/widgets/update_progress.dart';
 import 'package:flutter_hbb/george/george_config.dart';
-import 'package:flutter_hbb/george/george_deep_link.dart';
 import 'package:flutter_hbb/george/george_enroll.dart';
 import 'package:flutter_hbb/george/george_host_mode.dart';
 import 'package:flutter_hbb/george/george_invite.dart';
@@ -20,7 +18,6 @@ import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher_string.dart';
 
 /// Largura do painel esquerdo da home (upstream: 200).
 const double kGeorgeLeftPaneWidth = 320.0;
@@ -36,8 +33,6 @@ class GeorgeHomeHero extends StatefulWidget {
 }
 
 class _GeorgeHomeHeroState extends State<GeorgeHomeHero> {
-  final _connectCtrl = TextEditingController();
-  final _connectFocus = FocusNode();
 
   @override
   void initState() {
@@ -53,8 +48,6 @@ class _GeorgeHomeHeroState extends State<GeorgeHomeHero> {
 
   @override
   void dispose() {
-    _connectCtrl.dispose();
-    _connectFocus.dispose();
     super.dispose();
   }
 
@@ -73,11 +66,8 @@ class _GeorgeHomeHeroState extends State<GeorgeHomeHero> {
           if (!widget.isOutgoingOnly) const SizedBox(height: 10),
           if (!widget.isOutgoingOnly) const GeorgeThisPcCard(),
           if (!widget.isOutgoingOnly) const SizedBox(height: 14),
-          _connectRow(context),
-          const SizedBox(height: 8),
           _inviteButton(context),
           const GeorgeOrgDevicesButton(),
-          _updateBanner(context),
         ],
       ),
     );
@@ -97,7 +87,7 @@ class _GeorgeHomeHeroState extends State<GeorgeHomeHero> {
                 dark
                     ? 'assets/george/george-logo-white.png'
                     : 'assets/george/george-logo.png',
-                height: 34,
+                height: 46,
                 fit: BoxFit.contain,
                 alignment: Alignment.centerLeft,
                 errorBuilder: (_, __, ___) => Text(GeorgeConfig.appName,
@@ -263,58 +253,6 @@ class _GeorgeHomeHeroState extends State<GeorgeHomeHero> {
     });
   }
 
-  // ---------- Conectar ----------
-  void _submitConnect() {
-    final text = _connectCtrl.text.trim();
-    if (text.isEmpty) return;
-    if (GeorgeConfig.looksLikeInviteCode(text)) {
-      georgeConnectWithInvite(text);
-    } else {
-      connect(context, text.replaceAll(' ', ''));
-    }
-  }
-
-  Widget _connectRow(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(translate('george_connect_to_id'),
-            style: TextStyle(
-                fontSize: 12, color: GeorgeTheme.mutedForeground(context))),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            Expanded(
-              child: SizedBox(
-                height: 44,
-                child: TextField(
-                  controller: _connectCtrl,
-                  focusNode: _connectFocus,
-                  onSubmitted: (_) => _submitConnect(),
-                  textInputAction: TextInputAction.go,
-                  style: const TextStyle(fontSize: 15),
-                  decoration: InputDecoration(
-                    hintText: 'ID / ${translate('george_invite_code')}',
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            SizedBox(
-              height: 44,
-              child: ElevatedButton(
-                onPressed: _submitConnect,
-                child: Text(translate('george_connect')),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
   Widget _inviteButton(BuildContext context) {
     return SizedBox(
       height: 44,
@@ -324,48 +262,6 @@ class _GeorgeHomeHeroState extends State<GeorgeHomeHero> {
         label: Text(translate('george_invite')),
       ),
     );
-  }
-
-  // ---------- atualização ----------
-  Widget _updateBanner(BuildContext context) {
-    return Obx(() {
-      final url = stateGlobal.updateUrl.value;
-      if (url.isEmpty) return const SizedBox.shrink();
-      return Container(
-        margin: const EdgeInsets.only(top: 12),
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-        decoration: BoxDecoration(
-          color: GeorgeTheme.primary(context).withOpacity(0.12),
-          borderRadius: BorderRadius.circular(GeorgeTokens.radius),
-          border: Border.all(
-              color: GeorgeTheme.primary(context).withOpacity(0.35)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-                '${translate('george_update_available')} (${bind.mainGetNewVersion()})',
-                style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 6),
-            SizedBox(
-              height: 36,
-              child: TextButton.icon(
-                // Windows/macOS instalados: baixa, confere a assinatura do George e
-                // instala em silêncio (reinicia o app). Senão, abre a página.
-                onPressed: () => ((isWindows || isMacOS) && bind.mainIsInstalled())
-                    ? handleUpdate(url)
-                    : launchUrlString(url),
-                icon: const Icon(Icons.system_update_alt, size: 16),
-                label: Text(translate(((isWindows || isMacOS) && bind.mainIsInstalled())
-                    ? 'george_update_now'
-                    : 'george_update_download')),
-              ),
-            ),
-          ],
-        ),
-      );
-    });
   }
 }
 

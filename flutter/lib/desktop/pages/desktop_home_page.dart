@@ -1,4 +1,5 @@
 import 'package:flutter_hbb/george/george_home.dart'; // GEORGE
+import 'package:flutter_hbb/george/george_notice_bar.dart'; // GEORGE
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
@@ -60,15 +61,23 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Widget build(BuildContext context) {
     super.build(context);
     final isIncomingOnly = bind.isIncomingOnly();
-    return _buildBlock(
-        child: Row(
+    final row = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         buildLeftPane(context),
         if (!isIncomingOnly) const VerticalDivider(width: 1),
         if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
       ],
-    ));
+    );
+    if (isIncomingOnly) return _buildBlock(child: row);
+    // GEORGE: avisos (atualização, permissões, serviço) numa barra fina no topo,
+    // sempre visíveis, em vez de cartões no fim do painel esquerdo.
+    return _buildBlock(
+        child: Column(children: [
+      const GeorgeUpdateNotice(),
+      Obx(() => buildHelpCards(stateGlobal.updateUrl.value)),
+      Expanded(child: row),
+    ]));
   }
 
   Widget _buildBlock({required Widget child}) {
@@ -85,6 +94,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       // Convidar). Substitui logo/dica/ID board do upstream.
       GeorgeHomeHero(isOutgoingOnly: isOutgoingOnly),
       if (!isOutgoingOnly) buildPasswordBoard(context),
+      if (isIncomingOnly)
       FutureBuilder<Widget>(
         future: Future.value(
             Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
@@ -596,6 +606,22 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           isCardClosed = true;
         });
       }
+    }
+
+    // GEORGE: mesmo aviso, como barra fina no topo (ver george_notice_bar.dart)
+    if (!bind.isIncomingOnly()) {
+      return GeorgeNoticeBar(
+        kind: (title == 'Permissions' || title == 'Warning')
+            ? GeorgeNoticeKind.warning
+            : GeorgeNoticeKind.info,
+        title: title.isEmpty ? null : translate(title),
+        text: translate(content),
+        actionLabel: btnText.isEmpty ? null : translate(btnText),
+        onAction: btnText.isEmpty ? null : onPressed,
+        helpLabel: help == null ? null : translate(help),
+        helpUrl: link,
+        onClose: closeButton == true ? closeCard : null,
+      );
     }
 
     return Stack(
